@@ -1,0 +1,1 @@
+docker build --platform x86_64 -f ${DOCKER_FILE} -t ${IMAGE} .
