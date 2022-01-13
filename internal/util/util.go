@@ -1,30 +1,93 @@
 package util
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"time"
+
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
+	"github.com/run-ai/preinstall-diagnostics/internal/log"
+	"github.com/run-ai/preinstall-diagnostics/internal/resources"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 )
 
-func EnvOrError(envVar string) (string, error) {
-	val, defined := os.LookupEnv(envVar)
-	if !defined {
-		return "", fmt.Errorf("env var %s is not defined", envVar)
+func RunTests(tests []func() error) {
+	for _, test := range tests {
+		err := test()
+		if err != nil {
+			log.ErrorF("%v", err)
+			log.Fail()
+		} else {
+			log.Pass()
+		}
 	}
-
-	return val, nil
 }
 
-func EnvOrDefault(envVar, def string) string {
-	val, err := EnvOrError(envVar)
-	if err != nil {
-		return def
+func TemplateResources(backendFQDN, image, imageRegistry, runaiSaas string) {
+	ds := &resources.DaemonSet
+	if backendFQDN != "" {
+		ds.Spec.Template.Spec.Containers[0].Env =
+			append(ds.Spec.Template.Spec.Containers[0].Env,
+				v1.EnvVar{
+					Name:  env.BackendFQDNEnvVar,
+					Value: backendFQDN,
+				})
 	}
 
-	return val
+	if imageRegistry != "" {
+		ds.Spec.Template.Spec.Containers[0].Env =
+			append(ds.Spec.Template.Spec.Containers[0].Env,
+				v1.EnvVar{
+					Name:  env.RegistryEnvVar,
+					Value: imageRegistry,
+				})
+	}
+
+	if runaiSaas != "" {
+		ds.Spec.Template.Spec.Containers[0].Env =
+			append(ds.Spec.Template.Spec.Containers[0].Env,
+				v1.EnvVar{
+					Name:  env.RunAISaasEnvVar,
+					Value: runaiSaas,
+				})
+	}
+
+	if image != "" {
+		ds.Spec.Template.Spec.Containers[0].Image = image
+	}
 }
 
-func PanicIfError(err error) {
+func DeleteResources(client kubernetes.Interface, dynClient dynamic.Interface) error {
+	err := resources.DeleteResources(resources.DeletionOrder(), dynClient)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	fmt.Println("waiting for all resources to be deleted...")
+
+	// wait for ns to be deleted
+	for {
+		_, err := client.CoreV1().Namespaces().Get(context.TODO(),
+			resources.Namespace.Name, metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				break
+			}
+
+			return err
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	fmt.Println("all resources were successfully deleted")
+	return nil
+}
+
+func CreateResources(backendFQDN string, dynClient dynamic.Interface) error {
+	return resources.CreateResources(resources.CreationOrder(), dynClient)
 }

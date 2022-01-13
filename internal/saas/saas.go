@@ -4,19 +4,17 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
-	"github.com/run-ai/preinstall-diagnostics/internal/util"
 )
 
 const (
-	RunAISaasEnvVar = "RUNAI_SAAS"
-
 	RunAISaasAddress = "https://app.run.ai"
 )
 
 func CheckRunAIBackendReachable() error {
 	log.TitleF("Run:AI service access: %s", RunAISaasAddress)
-	saas := util.EnvOrDefault(RunAISaasEnvVar, RunAISaasAddress)
+	saas := env.EnvOrDefault(env.RunAISaasEnvVar, RunAISaasAddress)
 
 	res, err := http.Get(saas)
 	if err != nil {
