@@ -1,14 +1,12 @@
 package client
 
 import (
-	"github.com/run-ai/preinstall-diagnostics/internal/util"
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-const kubeConfigEnvVar = "KUBECONFIG"
 
 var (
 	config        *rest.Config
@@ -25,7 +23,7 @@ func getConfig() (*rest.Config, error) {
 	// try external cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		kubeConfigPath, kubeConfErr := util.EnvOrError(kubeConfigEnvVar)
+		kubeConfigPath, kubeConfErr := env.EnvOrError(env.KubeConfigEnvVar)
 		if kubeConfErr != nil {
 			return nil, kubeConfErr
 		}

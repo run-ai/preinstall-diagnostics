@@ -5,15 +5,60 @@ This tool is used prior to Run:AI installations to collect cluster information t
 help fine-tune the installation process
 
 ## Build
-```
-REGISTRY=gcr.io/run-ai-lab VERSION=<your-private-tag> make -e all
-```
+  ### Production
+  #### Build and push
+  ```
+  make -e all
+  ```
+
+### Development
+  #### Build and push
+  ```
+  REGISTRY=gcr.io/run-ai-lab VERSION=<your-private-tag> make -e all
+  ```
+  #### Building the binary
+  ```
+  REGISTRY=gcr.io/run-ai-lab VERSION=<your-private-tag> make -e binary
+  ```
+
+  #### Building the container image
+  ```
+  REGISTRY=gcr.io/run-ai-lab VERSION=<your-private-tag> make -e builder-image image
+  ```
+
+  #### Pushing the image
+  ```
+  REGISTRY=gcr.io/run-ai-lab VERSION=<your-private-tag> make -e push-image
+  ```
+
+  #### Updating the builder image (in case some new build tools are needed)
+  `cmd/preinstall-diagnostics/builder-image.Dockerfile` has to be updated to install the new required tools, once it is updated, the builder image can be built and pushed:
+  ```
+  REGISTRY=gcr.io/run-ai-lab VERSION=<your-private-tag> make -e builder-image push-builder
+  ```
 
 ## Running at client environments
-- The binary should be provided to the customer according to their PC's platform (windows/linux/apple x86/ apple m1), the server platform is assumed to be `x86_64`
-- The container image should be provided to the customer as well:
-    * If the client environment is air-gapped, the image should be provided to them offline and pushed to their internal registry, and the binary should be run with `--image` to modify the image used.
-    * If the client is connected to the internet, the proper image will be pulled from the `run-ai-prod` registry.
+  - The binary should be provided to the customer according to their PC's platform (windows/linux/apple x86/ apple m1), the server platform is assumed to be `x86_64`
+  - The container image should be provided to the customer as well:
+      * If the client environment is air-gapped, the image should be provided to them offline and pushed to their internal registry, and the binary should be run with `--image` to modify the image used:
+        * Save the image locally
+          ```
+          docker save --output preinstall-diagnostics.tar gcr.io/run-ai-prod/preinstall-diagnostics:${VERSION}
+          ```
+
+        * Load the image to the client's internal registry
+        
+          Once the archive was provided to the user, they can load the image to their internal registry using docker:
+          ```
+          docker load --input preinstall-diagnostics.tar
+          docker tag gcr.io/run-ai-prod/preinstall-diagnostics:${VERSION} ${CLIENT_IMAGE_AND_TAG}
+          docker push ${CLIENT_IMAGE_AND_TAG}
+          ```
+        * Running the diagnostics tool with the internal image
+          ```
+          preinstall-diagnostics-linux-amd64 --image ${CLIENT_IMAGE_AND_TAG}
+          ```
+      * If the client is connected to the internet, the proper image will be pulled from the `run-ai-prod` registry.
 
 ## Help
 ```
@@ -26,7 +71,7 @@ Usage of ./_out/preinstall-diagnostics-darwin-arm64:
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-prod/preinstall-diagnostics:v0.1.0") # Version might varys
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-prod/preinstall-diagnostics:v0.1.0") # Version will vary depending on the latest release
   -output string
     	File to save the output to, if omitted, prints to stdout
   -registry string

@@ -14,9 +14,9 @@ import (
 
 	ocpv1 "github.com/openshift/api/config/v1"
 	"github.com/run-ai/preinstall-diagnostics/internal/client"
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/resources"
-	"github.com/run-ai/preinstall-diagnostics/internal/util"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,11 +26,6 @@ import (
 )
 
 const (
-	NodeNameEnvVar = "NODE_NAME"
-	PodNameEnvVar  = "POD_NAME"
-
-	BackendFQDNEnvVar = "BACKEND_FQDN"
-
 	// Maximum amount of times to test for availability
 	attempts = 100
 
@@ -84,7 +79,9 @@ func startPingPongServer() {
 
 	go func() {
 		err := http.ListenAndServe(":8080", nil)
-		util.PanicIfError(err)
+		if err != nil {
+			panic(err)
+		}
 	}()
 }
 
@@ -175,12 +172,12 @@ func waitAllPodsPingable() error {
 		return err
 	}
 
-	nodeName, err := util.EnvOrError(NodeNameEnvVar)
+	nodeName, err := env.EnvOrError(env.NodeNameEnvVar)
 	if err != nil {
 		return err
 	}
 
-	podName, err := util.EnvOrError(PodNameEnvVar)
+	podName, err := env.EnvOrError(env.PodNameEnvVar)
 	if err != nil {
 		return err
 	}
@@ -535,7 +532,7 @@ func DCGMExporterAvailable() error {
 func CheckDNSResolve() error {
 	log.TitleF("DNS Resolver")
 
-	backendFQDN, err := util.EnvOrError(BackendFQDNEnvVar)
+	backendFQDN, err := env.EnvOrError(env.BackendFQDNEnvVar)
 	if err != nil {
 		return err
 	}
