@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
-	"github.com/run-ai/preinstall-diagnostics/internal/util"
 )
 
 const (
-	RegistryEnvVar = "REGISTRY"
-
 	RunAIProdRegistry    = "gcr.io/run-ai-prod"
 	RunAIProdRegistryURL = "https://" + RunAIProdRegistry
 )
@@ -21,7 +19,7 @@ var (
 )
 
 func CheckRunAIRegistryReachable() error {
-	registry := util.EnvOrDefault(RegistryEnvVar, RunAIProdRegistryURL)
+	registry := env.EnvOrDefault(env.RegistryEnvVar, RunAIProdRegistryURL)
 
 	log.TitleF("Connectivity to runai container registry: %s", registry)
 
