@@ -1,7 +1,11 @@
 package client
 
 import (
+	"os"
+	"path"
+
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
+	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -21,20 +25,35 @@ func getConfig() (*rest.Config, error) {
 
 	// Try to build internal cluster config, and if that fails,
 	// try external cluster config
-	config, err := rest.InClusterConfig()
+	var err error
+	config, err = clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
-		kubeConfigPath, kubeConfErr := env.EnvOrError(env.KubeConfigEnvVar)
-		if kubeConfErr != nil {
-			return nil, kubeConfErr
+		userHomeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
 		}
 
-		config, kubeConfErr = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
-		if kubeConfErr != nil {
-			return nil, kubeConfErr
+		defaultKubeConfigPath := path.Join(userHomeDir, "/.kube/config")
+		kubeConfigPath := env.EnvOrDefault(env.KubeConfigEnvVar, defaultKubeConfigPath)
+
+		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return config, nil
+}
+
+func Init() error {
+	log.LogF("initializing Kubernetes client...")
+	_, err := getConfig()
+	if err != nil {
+		return err
+	}
+
+	log.LogF("successfully initizlied Kubernetes client")
+	return nil
 }
 
 func Clientset() (*kubernetes.Clientset, error) {

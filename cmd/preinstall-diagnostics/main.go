@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/run-ai/preinstall-diagnostics/internal/cmd/cli"
@@ -11,6 +12,7 @@ import (
 	"github.com/run-ai/preinstall-diagnostics/internal/registry"
 	"github.com/run-ai/preinstall-diagnostics/internal/resources"
 	"github.com/run-ai/preinstall-diagnostics/internal/saas"
+	ver "github.com/run-ai/preinstall-diagnostics/internal/version"
 )
 
 const (
@@ -21,6 +23,7 @@ const (
 	runaiContainerRegistryArgName = "registry"
 	runaiSaasArgName              = "saas-address"
 	outputArgName                 = "output"
+	versionArgName                = "version"
 )
 
 var (
@@ -33,6 +36,7 @@ var (
 	runaiContainerRegistry string
 	runaiSaas              string
 	output                 string
+	version                bool
 
 	outputFile *os.File
 )
@@ -48,6 +52,8 @@ func init() {
 	flag.StringVar(&runaiContainerRegistry, runaiContainerRegistryArgName, registry.RunAIProdRegistryURL, "URL to container image registry to check connectivity to")
 	flag.StringVar(&runaiSaas, runaiSaasArgName, saas.RunAISaasAddress, "URL the Run:AI service to check connectivity to")
 	flag.StringVar(&output, outputArgName, "", "File to save the output to, if omitted, prints to stdout")
+	flag.BoolVar(&version, versionArgName, false, "Prints the binary version")
+
 	flag.Parse()
 
 	if output != "" {
@@ -67,6 +73,10 @@ func init() {
 }
 
 func main() {
+	if version {
+		fmt.Println(ver.Version)
+		return
+	}
 	if daemonsetMode {
 		daemonset.DaemonsetMain()
 	} else {
