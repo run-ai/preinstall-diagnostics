@@ -12,8 +12,8 @@ const (
 	RunAISaasAddress = "https://app.run.ai"
 )
 
-func CheckRunAIBackendReachable() error {
-	log.TitleF("Run:AI service access: %s", RunAISaasAddress)
+func CheckRunAIBackendReachable(logger *log.Logger) error {
+	logger.TitleF("Run:AI service access: %s", RunAISaasAddress)
 	saas := env.EnvOrDefault(env.RunAISaasEnvVar, RunAISaasAddress)
 
 	res, err := http.Get(saas)
@@ -25,6 +25,6 @@ func CheckRunAIBackendReachable() error {
 		return fmt.Errorf("status code of %d was returned from %s", res.StatusCode, saas)
 	}
 
-	log.LogF("Run:AI service is accessible from within the cluster")
+	logger.LogF("Run:AI service is accessible from within the cluster")
 	return nil
 }

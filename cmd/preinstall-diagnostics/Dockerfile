@@ -1,4 +1,6 @@
-FROM gcr.io/run-ai-prod/preinstall-diagnostics-builder:v0.1.0 AS builder
+# Builder image name can be found in the makefile
+ARG BUILDER_IMAGE=notavailable
+FROM ${BUILDER_IMAGE} AS builder
 
 # Set up env for go compiling
 ENV GOPATH=/home/preinstall-diagnostics/go

@@ -2,7 +2,7 @@ OUT_DIR=_out
 BIN=preinstall-diagnostics
 
 REGISTRY=gcr.io/run-ai-lab
-VERSION=v0.1.2
+VERSION=v1.0.0
 
 IMAGE_DOCKER_FILE=cmd/preinstall-diagnostics/Dockerfile
 IMAGE=$(REGISTRY)/preinstall-diagnostics:$(VERSION)
@@ -20,7 +20,7 @@ builder-image:
 
 .PHONY: image
 image:
-	DOCKER_FILE=$(IMAGE_DOCKER_FILE) IMAGE=$(IMAGE) ./scripts/build-image.sh
+	DOCKER_FILE=$(IMAGE_DOCKER_FILE) IMAGE=$(IMAGE) BUILDER_IMAGE=$(BUILDER_IMAGE) ./scripts/build-image.sh
 
 .PHONY: push-builder
 push-builder:

@@ -61,14 +61,18 @@ var (
 		// Not all of our custumers support MIG?
 		"nvidia.com/mig.strategy": "",
 	}
+
+	nginxLabels = map[string]string{
+		"app": "nginx-ingress",
+	}
 )
 
-func startPingPongServer() {
+func startPingPongServer(logger *log.Logger) {
 	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		t := time.Now()
 		tjs, err := json.Marshal(t)
 		if err != nil {
-			log.ErrorF("failed to marshal system time: %v", err)
+			logger.ErrorF("failed to marshal system time: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
@@ -85,7 +89,7 @@ func startPingPongServer() {
 	}()
 }
 
-func GetCompletePodLogs(pod *v1.Pod) (string, error) {
+func GetCompletePodLogs(pod *v1.Pod, logger *log.Logger) (string, error) {
 	client, err := client.Clientset()
 	if err != nil {
 		return "", err
@@ -107,7 +111,7 @@ func GetCompletePodLogs(pod *v1.Pod) (string, error) {
 		logsReady = strings.Contains(logs, log.CompleteTag)
 
 		if !logsReady {
-			log.LogF("logs for [%s/%s] are not ready yet, retrying in %d seconds...",
+			logger.LogF("logs for [%s/%s] are not ready yet, retrying in %d seconds...",
 				pod.Spec.NodeName, pod.Name, sleepInterval/time.Second)
 		}
 
@@ -135,7 +139,7 @@ func GetDaemonsetPods(client *kubernetes.Clientset) ([]v1.Pod, error) {
 	return pods.Items, nil
 }
 
-func WaitDaemonSetAvailable() error {
+func WaitDaemonSetAvailable(logger *log.Logger) error {
 	client, err := client.Clientset()
 	if err != nil {
 		return err
@@ -147,14 +151,14 @@ func WaitDaemonSetAvailable() error {
 	for dsAvailabilityAttempts > 0 && !available {
 		ds, err := client.AppsV1().DaemonSets(resources.DaemonSet.Namespace).Get(context.TODO(), resources.DaemonSet.Name, metav1.GetOptions{})
 		if err != nil {
-			log.LogF("fetching daemonset failed with %v, retrying in %d seconds",
+			logger.LogF("fetching daemonset failed with %v, retrying in %d seconds",
 				err, sleepInterval/time.Second)
 		} else {
 			if ds.Status.NumberAvailable == ds.Status.DesiredNumberScheduled {
-				log.LogF("all daemonset pods are available")
+				logger.LogF("all daemonset pods are available")
 				return nil
 			} else {
-				log.LogF("not all pods are ready [%d/%d], retrying in %d seconds",
+				logger.LogF("not all pods are ready [%d/%d], retrying in %d seconds",
 					ds.Status.NumberAvailable, ds.Status.DesiredNumberScheduled, sleepInterval/time.Second)
 			}
 		}
@@ -166,7 +170,7 @@ func WaitDaemonSetAvailable() error {
 	return fmt.Errorf("timed out waiting for daemonset to be ready")
 }
 
-func waitAllPodsPingable() error {
+func waitAllPodsPingable(logger *log.Logger) error {
 	client, err := client.Clientset()
 	if err != nil {
 		return err
@@ -198,22 +202,22 @@ func waitAllPodsPingable() error {
 				continue
 			}
 
-			log.LogF("attempting to ping pod [%s/%s]...", pod.Spec.NodeName, pod.Name)
+			logger.LogF("attempting to ping pod [%s/%s]...", pod.Spec.NodeName, pod.Name)
 
 			ip := pod.Status.PodIP
 			url := fmt.Sprintf("%s//%s:%s/%s", "http:", ip, "8080", "ping")
 
 			res, err := http.Get(url)
 			if err != nil {
-				log.ErrorF("[%s/%s] -> [%s/%s]: could not ping [%s/%s] due to %v, retrying in %d seconds",
+				logger.ErrorF("[%s/%s] -> [%s/%s]: could not ping [%s/%s] due to %v, retrying in %d seconds",
 					nodeName, podName, pod.Spec.NodeName, pod.Name,
 					pod.Spec.NodeName, pod.Name, err, sleepInterval/time.Second)
 			} else {
 				if res.StatusCode != 200 {
-					log.ErrorF("[%s/%s] -> [%s/%s]: http ping failed got status code %d",
+					logger.ErrorF("[%s/%s] -> [%s/%s]: http ping failed got status code %d",
 						nodeName, podName, pod.Spec.NodeName, pod.Name, res.StatusCode)
 				} else {
-					log.LogF("[%s/%s] -> [%s/%s]: successfully pinged",
+					logger.LogF("[%s/%s] -> [%s/%s]: successfully pinged",
 						nodeName, podName, pod.Spec.NodeName, pod.Name)
 
 					targetTimeJSON, err := io.ReadAll(res.Body)
@@ -238,10 +242,10 @@ func waitAllPodsPingable() error {
 					}
 
 					if diff > maximumAllowedTimeDiff {
-						log.ErrorF("[%s/%s] -> [%s/%s]: node clocks are out of sync",
+						logger.ErrorF("[%s/%s] -> [%s/%s]: node clocks are out of sync",
 							nodeName, podName, pod.Spec.NodeName, pod.Name)
 					} else {
-						log.LogF("[%s/%s] -> [%s/%s]: node clocks are in sync",
+						logger.LogF("[%s/%s] -> [%s/%s]: node clocks are in sync",
 							nodeName, podName, pod.Spec.NodeName, pod.Name)
 						pingedPods[pod.Name] = struct{}{}
 					}
@@ -267,17 +271,17 @@ func waitAllPodsPingable() error {
 	return nil
 }
 
-func CheckNodeConnectivity() error {
-	log.TitleF("Node connectivity check")
+func CheckNodeConnectivity(logger *log.Logger) error {
+	logger.TitleF("Node connectivity check")
 
-	startPingPongServer()
+	startPingPongServer(logger)
 
-	err := WaitDaemonSetAvailable()
+	err := WaitDaemonSetAvailable(logger)
 	if err != nil {
 		return err
 	}
 
-	err = waitAllPodsPingable()
+	err = waitAllPodsPingable(logger)
 	if err != nil {
 		return err
 	}
@@ -319,8 +323,8 @@ func isOpenShift() (bool, string, error) {
 	return true, verCR.Status.History[0].Version, nil
 }
 
-func ShowClusterVersion() error {
-	log.TitleF("Cluster Version")
+func ShowClusterVersion(logger *log.Logger) error {
+	logger.TitleF("Cluster Version")
 
 	dc, err := client.Clientset()
 	if err != nil {
@@ -332,7 +336,7 @@ func ShowClusterVersion() error {
 		return err
 	}
 
-	log.LogF("Kubernetes Cluster Version: %s", ver.String())
+	logger.LogF("Kubernetes Cluster Version: %s", ver.String())
 
 	isOpenShift, version, err := isOpenShift()
 	if err != nil {
@@ -340,14 +344,14 @@ func ShowClusterVersion() error {
 	}
 
 	if isOpenShift {
-		log.LogF("Openshift Cluster Version: %s", version)
+		logger.LogF("Openshift Cluster Version: %s", version)
 	}
 
 	return nil
 }
 
-func GetResolvConf() error {
-	log.TitleF("Print resolv.conf")
+func GetResolvConf(logger *log.Logger) error {
+	logger.TitleF("Print resolv.conf")
 
 	f, err := os.Open("/etc/resolv.conf")
 	if err != nil {
@@ -359,13 +363,13 @@ func GetResolvConf() error {
 		return err
 	}
 
-	log.LogF(string(content))
+	logger.LogF(string(content))
 
 	return nil
 }
 
-func ShowGPUNodes() error {
-	log.TitleF("GPU Nodes")
+func ShowGPUNodes(logger *log.Logger) error {
+	logger.TitleF("GPU Nodes")
 
 	client, err := client.Clientset()
 	if err != nil {
@@ -382,17 +386,17 @@ func ShowGPUNodes() error {
 	}
 
 	for _, node := range nodes.Items {
-		log.LogF("Node name: %s", node.Name)
+		logger.LogF("Node name: %s", node.Name)
 	}
 
-	log.LogF("please verify that the list above includes all GPU nodes in the cluster")
-	log.LogF("if you suspect GPU nodes are missing from the list above, gpu-feature-discovery might be malfunctioning")
+	logger.LogF("please verify that the list above includes all GPU nodes in the cluster")
+	logger.LogF("if you suspect GPU nodes are missing from the list above, gpu-feature-discovery might be malfunctioning")
 
 	return nil
 }
 
-func PrometheusAvailable() error {
-	log.TitleF("Prometheus check")
+func PrometheusAvailable(logger *log.Logger) error {
+	logger.TitleF("Prometheus check")
 
 	dclient, err := client.DynamicClient()
 	if err != nil {
@@ -412,12 +416,12 @@ func PrometheusAvailable() error {
 		}
 	}
 
-	log.LogF("Prometheus is available in the cluster")
+	logger.LogF("Prometheus is available in the cluster")
 	return nil
 }
 
-func NodeFeatureDiscoveryAvailable() error {
-	log.TitleF("Node Feature Discovery")
+func NodeFeatureDiscoveryAvailable(logger *log.Logger) error {
+	logger.TitleF("Node Feature Discovery")
 
 	client, err := client.Clientset()
 	if err != nil {
@@ -444,12 +448,12 @@ func NodeFeatureDiscoveryAvailable() error {
 		return fmt.Errorf("nfd-worker pods are not available")
 	}
 
-	log.LogF("Node Feature Discovery is available in the cluster")
+	logger.LogF("Node Feature Discovery is available in the cluster")
 	return nil
 }
 
-func ShowStorageClasses() error {
-	log.TitleF("Storage Classes")
+func ShowStorageClasses(logger *log.Logger) error {
+	logger.TitleF("Storage Classes")
 
 	client, err := client.Clientset()
 	if err != nil {
@@ -462,21 +466,21 @@ func ShowStorageClasses() error {
 	}
 
 	if len(scs.Items) == 0 {
-		log.LogF("No storage classes defined in the cluster")
+		logger.LogF("No storage classes defined in the cluster")
 		return nil
 	}
 
-	log.LogF("StorageClasses in cluster:")
+	logger.LogF("StorageClasses in cluster:")
 
 	for _, sc := range scs.Items {
-		log.LogF("	%s", sc.Name)
+		logger.LogF("	%s", sc.Name)
 	}
 
 	return nil
 }
 
-func NvidiaDevicePluginAvailable() error {
-	log.TitleF("Nvidia device plugin")
+func NvidiaDevicePluginAvailable(logger *log.Logger) error {
+	logger.TitleF("Nvidia device plugin")
 
 	client, err := client.Clientset()
 	if err != nil {
@@ -494,7 +498,7 @@ func NvidiaDevicePluginAvailable() error {
 				return fmt.Errorf("not all nvidia device plugin pods are ready")
 			}
 
-			log.LogF("Nvidia device plugin is available")
+			logger.LogF("Nvidia device plugin is available")
 			return nil
 		}
 	}
@@ -502,8 +506,8 @@ func NvidiaDevicePluginAvailable() error {
 	return fmt.Errorf("nvidia device plugin was not found in the cluster")
 }
 
-func DCGMExporterAvailable() error {
-	log.TitleF("DCGM Exporter")
+func DCGMExporterAvailable(logger *log.Logger) error {
+	logger.TitleF("DCGM Exporter")
 
 	client, err := client.Clientset()
 	if err != nil {
@@ -521,7 +525,7 @@ func DCGMExporterAvailable() error {
 				return fmt.Errorf("not all dcgm exporter pods are ready")
 			}
 
-			log.LogF("DCGM Exporter is available")
+			logger.LogF("DCGM Exporter is available")
 			return nil
 		}
 	}
@@ -529,8 +533,8 @@ func DCGMExporterAvailable() error {
 	return fmt.Errorf("dcgm exporter was not found in the cluster")
 }
 
-func CheckDNSResolve() error {
-	log.TitleF("DNS Resolver")
+func CheckDNSResolve(logger *log.Logger) error {
+	logger.TitleF("DNS Resolver")
 
 	backendFQDN, err := env.EnvOrError(env.BackendFQDNEnvVar)
 	if err != nil {
@@ -542,9 +546,9 @@ func CheckDNSResolve() error {
 		return err
 	}
 
-	log.LogF("Resolved IP addresses for %s", backendFQDN)
+	logger.LogF("Resolved IP addresses for %s", backendFQDN)
 	for _, ip := range ips {
-		log.LogF(ip.String())
+		logger.LogF(ip.String())
 	}
 
 	client, err := client.Clientset()
@@ -561,7 +565,7 @@ func CheckDNSResolve() error {
 		for _, node := range nodes.Items {
 			for _, nodeIP := range node.Status.Addresses {
 				if nodeIP.Address == ip.String() {
-					log.LogF("%s ip address is resolved to the IP of node %s", backendFQDN, node.Name)
+					logger.LogF("%s ip address is resolved to the IP of node %s", backendFQDN, node.Name)
 				}
 			}
 		}
@@ -570,36 +574,38 @@ func CheckDNSResolve() error {
 	return nil
 }
 
-func NginxIngressControllerAvailable() error {
-	log.TitleF("Nginx Ingress Controller")
+func NginxIngressControllerAvailable(logger *log.Logger) error {
+	logger.TitleF("Nginx Ingress Controller")
 
 	client, err := client.Clientset()
 	if err != nil {
 		return err
 	}
 
-	namespace, err := client.CoreV1().Namespaces().Get(context.TODO(),
-		"ingress-nginx", metav1.GetOptions{})
+	pods, err := client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+		LabelSelector: labels.FormatLabels(nginxLabels),
+	})
 	if err != nil {
 		return err
 	}
 
-	deployment, err := client.AppsV1().Deployments(namespace.Name).Get(context.TODO(),
-		"ingress-nginx-controller", metav1.GetOptions{})
-	if err != nil {
-		return err
+	if len(pods.Items) == 0 {
+		return fmt.Errorf("nginx ingress controller is not installed in the cluster")
 	}
 
-	if deployment.Status.AvailableReplicas != *deployment.Spec.Replicas {
-		return fmt.Errorf("not all ingress-nginx-controller pods are ready")
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != v1.PodRunning {
+			return fmt.Errorf("pod [%s/%s] is not ready, reports phase %s",
+				pod.Namespace, pod.Name, pod.Status.Phase)
+		}
 	}
 
-	log.LogF("Nginx Ingress Controller is available")
+	logger.LogF("Nginx Ingress Controller is available")
 	return nil
 }
 
-func ShowOSInfo() error {
-	log.TitleF("OS Information")
+func ShowOSInfo(logger *log.Logger) error {
+	logger.TitleF("OS Information")
 
 	uname := exec.Command("uname", "-a")
 	output, err := uname.Output()
@@ -612,7 +618,7 @@ func ShowOSInfo() error {
 		}
 	}
 
-	log.LogF("Os Info: %s", string(output))
+	logger.LogF("Os Info: %s", string(output))
 	return nil
 }
 
@@ -629,40 +635,40 @@ func checkURLAvailable(url string) error {
 	return nil
 }
 
-func RunAIHelmRepositoryReachable() error {
-	log.TitleF("Run:AI Helm Repository")
+func RunAIHelmRepositoryReachable(logger *log.Logger) error {
+	logger.TitleF("Run:AI Helm Repository")
 
 	const runaiCharts = "https://runai-charts.storage.googleapis.com"
 
 	return checkURLAvailable(runaiCharts)
 }
 
-func DockerHubReachable() error {
-	log.TitleF("DockerHub")
+func DockerHubReachable(logger *log.Logger) error {
+	logger.TitleF("DockerHub")
 
 	const dockerHub = "https://hub.docker.com"
 
 	return checkURLAvailable(dockerHub)
 }
 
-func QuayIOReachable() error {
-	log.TitleF("Quay.io")
+func QuayIOReachable(logger *log.Logger) error {
+	logger.TitleF("Quay.io")
 
 	const quay = "https://quay.io"
 
 	return checkURLAvailable(quay)
 }
 
-func RunAIPrometheusReachable() error {
-	log.TitleF("Run:AI Prometheus")
+func RunAIPrometheusReachable(logger *log.Logger) error {
+	logger.TitleF("Run:AI Prometheus")
 
 	const prom = "https://prometheus-us-central1.grafana.net"
 
 	return checkURLAvailable(prom)
 }
 
-func RunAIAuthProviderReachable() error {
-	log.TitleF("Run:AI Auth Provider")
+func RunAIAuthProviderReachable(logger *log.Logger) error {
+	logger.TitleF("Run:AI Auth Provider")
 
 	const auth = "https://runai-prod.auth0.com"
 

@@ -6,34 +6,73 @@ import (
 	"os"
 )
 
-const CompleteTag = "[COMPLETE]"
+const (
+	colorReset = "\033[0m"
+
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+
+	CompleteTag = "[COMPLETE]"
+	FailTag     = "[FAIL]"
+)
 
 var (
 	LogTarget io.Writer = os.Stdout
 )
 
-func TitleF(format string, args ...interface{}) {
-	fmt.Fprintf(LogTarget, "\n")
-	fmt.Fprintf(LogTarget, "[TEST] "+format+"\n", args...)
-	fmt.Fprintf(LogTarget, "============================================================================\n")
+type Logger struct {
+	logTarget io.Writer
 }
 
-func LogF(format string, args ...interface{}) {
-	fmt.Fprintf(LogTarget, "[LOG] "+format+"\n", args...)
+func NewLogger(logTarget io.Writer) *Logger {
+	return &Logger{
+		logTarget: logTarget,
+	}
 }
 
-func ErrorF(format string, args ...interface{}) {
-	fmt.Fprintf(LogTarget, "[ERROR] "+format+"\n", args...)
+func formatColor(str, color string) string {
+	return fmt.Sprintf("%s%s%s", color, str, colorReset)
 }
 
-func Pass() {
-	fmt.Fprint(LogTarget, "[PASS]\n")
+func red(str string) string {
+	return formatColor(str, colorRed)
 }
 
-func Fail() {
-	fmt.Fprint(LogTarget, "*****************[FAIL]*******************\n")
+func yellow(str string) string {
+	return formatColor(str, colorYellow)
 }
 
-func Complete() {
-	fmt.Fprint(LogTarget, CompleteTag+"\n")
+func green(str string) string {
+	return formatColor(str, colorGreen)
+}
+
+func (l *Logger) TitleF(format string, args ...interface{}) {
+	fmt.Fprintf(l.logTarget, "\n")
+	fmt.Fprintf(l.logTarget, yellow("[TEST] "+format)+"\n", args...)
+	fmt.Fprintf(l.logTarget, "============================================================================\n")
+}
+
+func (l *Logger) LogF(format string, args ...interface{}) {
+	fmt.Fprintf(l.logTarget, "[LOG] "+format+"\n", args...)
+}
+
+func (l *Logger) ErrorF(format string, args ...interface{}) {
+	fmt.Fprintf(l.logTarget, red("[ERROR] "+format)+"\n", args...)
+}
+
+func (l *Logger) Pass() {
+	fmt.Fprint(l.logTarget, green("[PASS]")+"\n")
+}
+
+func (l *Logger) Fail() {
+	fmt.Fprint(l.logTarget, red(FailTag)+"\n")
+}
+
+func (l *Logger) Complete() {
+	fmt.Fprint(l.logTarget, green(CompleteTag)+"\n")
+}
+
+func (l *Logger) WriteString(str string) (int, error) {
+	return l.logTarget.Write([]byte(str))
 }

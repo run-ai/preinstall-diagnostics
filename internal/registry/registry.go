@@ -18,10 +18,10 @@ var (
 	RunAIDiagnosticsImage = "gcr.io/run-ai-prod/preinstall-diagnostics:latest"
 )
 
-func CheckRunAIRegistryReachable() error {
+func CheckRunAIRegistryReachable(logger *log.Logger) error {
 	registry := env.EnvOrDefault(env.RegistryEnvVar, RunAIProdRegistryURL)
 
-	log.TitleF("Connectivity to runai container registry: %s", registry)
+	logger.TitleF("Connectivity to runai container registry: %s", registry)
 
 	res, err := http.Get(registry)
 	if err != nil {
@@ -32,6 +32,6 @@ func CheckRunAIRegistryReachable() error {
 		return fmt.Errorf("status code of %d was returned from %s", res.StatusCode, registry)
 	}
 
-	log.LogF("Run:AI container registry is accessible")
+	logger.LogF("Run:AI container registry is accessible")
 	return nil
 }
