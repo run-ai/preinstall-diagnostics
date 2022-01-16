@@ -71,11 +71,15 @@ Usage of ./_out/preinstall-diagnostics-darwin-arm64:
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-prod/preinstall-diagnostics:v0.1.0") # Version will vary depending on the latest release
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v1.0.0")
   -output string
-    	File to save the output to, if omitted, prints to stdout
+    	File to save the output to (default "runai-preinstall-diagnostics.txt")
   -registry string
     	URL to container image registry to check connectivity to (default "https://gcr.io/run-ai-prod")
   -saas-address string
     	URL the Run:AI service to check connectivity to (default "https://app.run.ai")
+  -stdout
+    	Print test results to stdout
+  -version
+    	Prints the binary version
 ```

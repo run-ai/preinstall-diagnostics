@@ -45,14 +45,14 @@ func getConfig() (*rest.Config, error) {
 	return config, nil
 }
 
-func Init() error {
-	log.LogF("initializing Kubernetes client...")
+func Init(logger *log.Logger) error {
+	logger.LogF("initializing Kubernetes client...")
 	_, err := getConfig()
 	if err != nil {
 		return err
 	}
 
-	log.LogF("successfully initizlied Kubernetes client")
+	logger.LogF("successfully initizlied Kubernetes client")
 	return nil
 }
 

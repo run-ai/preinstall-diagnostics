@@ -1,1 +1,1 @@
-docker build --platform x86_64 -f ${DOCKER_FILE} -t ${IMAGE} .
+docker build --platform x86_64 -f ${DOCKER_FILE} -t ${IMAGE} --build-arg BUILDER_IMAGE=${BUILDER_IMAGE} .

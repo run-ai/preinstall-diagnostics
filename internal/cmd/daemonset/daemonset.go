@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	internalClusterTests = []func() error{
+	internalClusterTests = []func(*log.Logger) error{
 		saas.CheckRunAIBackendReachable,
 		registry.CheckRunAIRegistryReachable,
 		cluster.CheckDNSResolve, // DNS: verify that the DNS provided as input can be resolved to an IP (optional, write/warn if the IP is one of the nodes)
@@ -27,10 +27,10 @@ var (
 	}
 )
 
-func DaemonsetMain() {
-	client.Init()
-	util.RunTests(internalClusterTests)
-	log.Complete()
+func DaemonsetMain(logger *log.Logger) {
+	client.Init(logger)
+	util.RunTests(internalClusterTests, logger)
+	logger.Complete()
 
 	// Sleep
 	<-make(chan struct{})

@@ -15,16 +15,20 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func RunTests(tests []func() error) {
+func RunTests(tests []func(*log.Logger) error, logger *log.Logger) []error {
+	var errs []error
 	for _, test := range tests {
-		err := test()
+		err := test(logger)
 		if err != nil {
-			log.ErrorF("%v", err)
-			log.Fail()
+			errs = append(errs, err)
+			logger.ErrorF("%v", err)
+			logger.Fail()
 		} else {
-			log.Pass()
+			logger.Pass()
 		}
 	}
+
+	return errs
 }
 
 func TemplateResources(backendFQDN, image, imageRegistry, runaiSaas string) {
