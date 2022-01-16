@@ -1,6 +1,7 @@
 package daemonset
 
 import (
+	"github.com/run-ai/preinstall-diagnostics/internal/client"
 	"github.com/run-ai/preinstall-diagnostics/internal/cluster"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/registry"
@@ -27,6 +28,7 @@ var (
 )
 
 func DaemonsetMain() {
+	client.Init()
 	util.RunTests(internalClusterTests)
 	log.Complete()
 
