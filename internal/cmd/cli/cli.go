@@ -31,6 +31,8 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry, runaiSaas st
 		return
 	}
 
+	client.Init()
+
 	dynClient, err := client.DynamicClient()
 	if err != nil {
 		panic(err)
