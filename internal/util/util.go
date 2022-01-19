@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
@@ -14,6 +13,22 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
+
+func RunInformationalTests(tests []func(*log.Logger) error, logger *log.Logger) []error {
+	var errs []error
+	for _, test := range tests {
+		err := test(logger)
+		if err != nil {
+			errs = append(errs, err)
+			logger.WarningF("%v", err)
+			logger.Warning()
+		} else {
+			logger.Pass()
+		}
+	}
+
+	return errs
+}
 
 func RunTests(tests []func(*log.Logger) error, logger *log.Logger) []error {
 	var errs []error
@@ -65,13 +80,13 @@ func TemplateResources(backendFQDN, image, imageRegistry, runaiSaas string) {
 	}
 }
 
-func DeleteResources(client kubernetes.Interface, dynClient dynamic.Interface) error {
+func DeleteResources(client kubernetes.Interface, dynClient dynamic.Interface, logger *log.Logger) error {
 	err := resources.DeleteResources(resources.DeletionOrder(), dynClient)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("waiting for all resources to be deleted...")
+	logger.WriteStringF("waiting for all resources to be deleted...")
 
 	// wait for ns to be deleted
 	for {
@@ -88,7 +103,7 @@ func DeleteResources(client kubernetes.Interface, dynClient dynamic.Interface) e
 		time.Sleep(time.Second)
 	}
 
-	fmt.Println("all resources were successfully deleted")
+	logger.WriteStringF("all resources were successfully deleted")
 	return nil
 }
 

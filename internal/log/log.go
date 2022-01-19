@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"io"
 	"os"
 )
 
@@ -11,24 +10,42 @@ const (
 
 	colorRed    = "\033[31m"
 	colorGreen  = "\033[32m"
+	colorBlue   = "\033[34m"
 	colorYellow = "\033[33m"
 
 	CompleteTag = "[COMPLETE]"
 	FailTag     = "[FAIL]"
-)
-
-var (
-	LogTarget io.Writer = os.Stdout
+	WarningTag  = "[WARNING]"
+	SkipTag     = "[SKIP]"
+	PassTag     = "[PASS]"
+	ErrorTag    = "[ERROR]"
+	TestTag     = "[TEST]"
+	LogTag      = "[LOG]"
 )
 
 type Logger struct {
-	logTarget io.Writer
+	file *os.File
 }
 
-func NewLogger(logTarget io.Writer) *Logger {
+func NewLogger(logFile *os.File) *Logger {
 	return &Logger{
-		logTarget: logTarget,
+		file: logFile,
 	}
+}
+
+func (l *Logger) FileName() string {
+	return l.file.Name()
+}
+
+func (l *Logger) WriteStringF(format string, args ...interface{}) (int, error) {
+	format += "\n"
+	fmt.Printf(format, args...)
+
+	if l.file == nil {
+		return 0, nil
+	}
+
+	return l.file.Write([]byte(fmt.Sprintf(format, args...)))
 }
 
 func formatColor(str, color string) string {
@@ -39,40 +56,52 @@ func red(str string) string {
 	return formatColor(str, colorRed)
 }
 
-func yellow(str string) string {
-	return formatColor(str, colorYellow)
+func blue(str string) string {
+	return formatColor(str, colorBlue)
 }
 
 func green(str string) string {
 	return formatColor(str, colorGreen)
 }
 
+func yellow(str string) string {
+	return formatColor(str, colorYellow)
+}
+
 func (l *Logger) TitleF(format string, args ...interface{}) {
-	fmt.Fprintf(l.logTarget, "\n")
-	fmt.Fprintf(l.logTarget, yellow("[TEST] "+format)+"\n", args...)
-	fmt.Fprintf(l.logTarget, "============================================================================\n")
+	l.WriteStringF("")
+	l.WriteStringF(blue(TestTag+" "+format), args...)
+	l.WriteStringF("--------------------------------------------------")
 }
 
 func (l *Logger) LogF(format string, args ...interface{}) {
-	fmt.Fprintf(l.logTarget, "[LOG] "+format+"\n", args...)
+	l.WriteStringF(LogTag+" "+format, args...)
 }
 
 func (l *Logger) ErrorF(format string, args ...interface{}) {
-	fmt.Fprintf(l.logTarget, red("[ERROR] "+format)+"\n", args...)
+	l.WriteStringF(red(ErrorTag+" "+format), args...)
+}
+
+func (l *Logger) WarningF(format string, args ...interface{}) {
+	l.WriteStringF(yellow(WarningTag+" "+format), args...)
+}
+
+func (l *Logger) Warning() {
+	l.WriteStringF(yellow(WarningTag))
 }
 
 func (l *Logger) Pass() {
-	fmt.Fprint(l.logTarget, green("[PASS]")+"\n")
+	l.WriteStringF(green(PassTag))
+}
+
+func (l *Logger) Skip() {
+	l.WriteStringF(yellow(SkipTag))
 }
 
 func (l *Logger) Fail() {
-	fmt.Fprint(l.logTarget, red(FailTag)+"\n")
+	l.WriteStringF(red(FailTag))
 }
 
 func (l *Logger) Complete() {
-	fmt.Fprint(l.logTarget, green(CompleteTag)+"\n")
-}
-
-func (l *Logger) WriteString(str string) (int, error) {
-	return l.logTarget.Write([]byte(str))
+	l.WriteStringF(green(CompleteTag))
 }
