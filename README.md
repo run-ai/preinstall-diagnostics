@@ -64,22 +64,20 @@ help fine-tune the installation process
 ```
 ❯ ./_out/preinstall-diagnostics-darwin-arm64 --help
 Usage of ./_out/preinstall-diagnostics-darwin-arm64:
-  -backend-fqdn string
-    	FQDN of the runai backend to resolve (required for DNS resolve test)
   -clean
     	Clean all runai diagnostics tools from the cluster
+  -domain string
+    	FQDN of the runai backend to resolve (required for DNS resolve test)
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v1.0.0")
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.0.0")
   -output string
     	File to save the output to (default "runai-preinstall-diagnostics.txt")
   -registry string
     	URL to container image registry to check connectivity to (default "https://gcr.io/run-ai-prod")
   -saas-address string
     	URL the Run:AI service to check connectivity to (default "https://app.run.ai")
-  -stdout
-    	Print test results to stdout
   -version
     	Prints the binary version
 ```

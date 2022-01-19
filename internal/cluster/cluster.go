@@ -32,10 +32,6 @@ const (
 	// Interval to wait between availability checks
 	sleepInterval = 5 * time.Second
 
-	nfdNamespace        = "node-feature-discovery"
-	nfdMasterDeployment = "nfd-master"
-	nfdWorkerDaemonset  = "nfd-worker"
-
 	nvidiaDevicePluginDaemonset = "nvidia-device-plugin"
 	dcgmExporterDaemonset       = "dcgm-exporter"
 
@@ -64,6 +60,14 @@ var (
 
 	nginxLabels = map[string]string{
 		"app": "nginx-ingress",
+	}
+
+	nfdLabels = map[string]string{
+		"app.kubernetes.io/name": "node-feature-discovery",
+	}
+
+	gfdLabels = map[string]string{
+		"app.kubernetes.io/name": "gpu-feature-discovery",
 	}
 )
 
@@ -149,12 +153,14 @@ func WaitDaemonSetAvailable(logger *log.Logger) error {
 	available := false
 
 	for dsAvailabilityAttempts > 0 && !available {
-		ds, err := client.AppsV1().DaemonSets(resources.DaemonSet.Namespace).Get(context.TODO(), resources.DaemonSet.Name, metav1.GetOptions{})
+		ds, err := client.AppsV1().DaemonSets(resources.DaemonSet.Namespace).Get(context.TODO(),
+			resources.DaemonSet.Name, metav1.GetOptions{})
 		if err != nil {
 			logger.LogF("fetching daemonset failed with %v, retrying in %d seconds",
 				err, sleepInterval/time.Second)
 		} else {
-			if ds.Status.NumberAvailable == ds.Status.DesiredNumberScheduled {
+			if ds.Status.DesiredNumberScheduled != 0 &&
+				ds.Status.NumberAvailable == ds.Status.DesiredNumberScheduled {
 				logger.LogF("all daemonset pods are available")
 				return nil
 			} else {
@@ -350,7 +356,7 @@ func ShowClusterVersion(logger *log.Logger) error {
 	return nil
 }
 
-func GetResolvConf(logger *log.Logger) error {
+func PrintDNSResolvConf(logger *log.Logger) error {
 	logger.TitleF("Print resolv.conf")
 
 	f, err := os.Open("/etc/resolv.conf")
@@ -395,7 +401,7 @@ func ShowGPUNodes(logger *log.Logger) error {
 	return nil
 }
 
-func PrometheusAvailable(logger *log.Logger) error {
+func PrometheusNotInstalled(logger *log.Logger) error {
 	logger.TitleF("Prometheus check")
 
 	dclient, err := client.DynamicClient()
@@ -409,18 +415,17 @@ func PrometheusAvailable(logger *log.Logger) error {
 		Resource: "prometheuses",
 	}).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return fmt.Errorf("a prometheus deployment was not found in the cluster")
-		} else {
+		if !errors.IsNotFound(err) {
 			return err
+		} else {
+			return nil
 		}
 	}
 
-	logger.LogF("Prometheus is available in the cluster")
-	return nil
+	return fmt.Errorf("prometheus is installed in the cluster")
 }
 
-func NodeFeatureDiscoveryAvailable(logger *log.Logger) error {
+func NodeFeatureDiscoveryNotInstalled(logger *log.Logger) error {
 	logger.TitleF("Node Feature Discovery")
 
 	client, err := client.Clientset()
@@ -428,27 +433,41 @@ func NodeFeatureDiscoveryAvailable(logger *log.Logger) error {
 		return err
 	}
 
-	master, err := client.AppsV1().Deployments(nfdNamespace).
-		Get(context.TODO(), nfdMasterDeployment, metav1.GetOptions{})
+	pods, err := client.CoreV1().Pods("").
+		List(context.TODO(), metav1.ListOptions{
+			LabelSelector: labels.FormatLabels(nfdLabels),
+		})
 	if err != nil {
 		return err
 	}
 
-	if master.Status.AvailableReplicas != *master.Spec.Replicas {
-		return fmt.Errorf("nfd-master pods are not available")
+	if len(pods.Items) != 0 {
+		return fmt.Errorf("node-feature-discovery is installed in the cluster")
 	}
 
-	worker, err := client.AppsV1().DaemonSets(nfdNamespace).
-		Get(context.TODO(), nfdWorkerDaemonset, metav1.GetOptions{})
+	return nil
+}
+
+func GPUFeatureDiscoveryNotInstalled(logger *log.Logger) error {
+	logger.TitleF("GPU Feature Discovery")
+
+	client, err := client.Clientset()
 	if err != nil {
 		return err
 	}
 
-	if worker.Status.NumberAvailable != worker.Status.DesiredNumberScheduled {
-		return fmt.Errorf("nfd-worker pods are not available")
+	pods, err := client.CoreV1().Pods("").
+		List(context.TODO(), metav1.ListOptions{
+			LabelSelector: labels.FormatLabels(gfdLabels),
+		})
+	if err != nil {
+		return err
 	}
 
-	logger.LogF("Node Feature Discovery is available in the cluster")
+	if len(pods.Items) != 0 {
+		return fmt.Errorf("gpu-feature-discovery is installed in the cluster")
+	}
+
 	return nil
 }
 
@@ -479,7 +498,7 @@ func ShowStorageClasses(logger *log.Logger) error {
 	return nil
 }
 
-func NvidiaDevicePluginAvailable(logger *log.Logger) error {
+func NvidiaDevicePluginNotInstalled(logger *log.Logger) error {
 	logger.TitleF("Nvidia device plugin")
 
 	client, err := client.Clientset()
@@ -494,19 +513,14 @@ func NvidiaDevicePluginAvailable(logger *log.Logger) error {
 
 	for _, ds := range dss.Items {
 		if strings.Contains(ds.Name, nvidiaDevicePluginDaemonset) {
-			if ds.Status.NumberAvailable != ds.Status.DesiredNumberScheduled {
-				return fmt.Errorf("not all nvidia device plugin pods are ready")
-			}
-
-			logger.LogF("Nvidia device plugin is available")
-			return nil
+			return fmt.Errorf("nvidia device plugin is installed in the cluster")
 		}
 	}
 
-	return fmt.Errorf("nvidia device plugin was not found in the cluster")
+	return nil
 }
 
-func DCGMExporterAvailable(logger *log.Logger) error {
+func DCGMExporterNotInstalled(logger *log.Logger) error {
 	logger.TitleF("DCGM Exporter")
 
 	client, err := client.Clientset()
@@ -521,24 +535,21 @@ func DCGMExporterAvailable(logger *log.Logger) error {
 
 	for _, ds := range dss.Items {
 		if strings.Contains(ds.Name, dcgmExporterDaemonset) {
-			if ds.Status.NumberAvailable != ds.Status.DesiredNumberScheduled {
-				return fmt.Errorf("not all dcgm exporter pods are ready")
-			}
-
-			logger.LogF("DCGM Exporter is available")
-			return nil
+			return fmt.Errorf("dcgm exporter is installed in the cluster")
 		}
 	}
 
-	return fmt.Errorf("dcgm exporter was not found in the cluster")
+	return nil
 }
 
-func CheckDNSResolve(logger *log.Logger) error {
+func ResolveBackendFQDN(logger *log.Logger) error {
 	logger.TitleF("DNS Resolver")
 
-	backendFQDN, err := env.EnvOrError(env.BackendFQDNEnvVar)
-	if err != nil {
-		return err
+	backendFQDN := env.EnvOrDefault(env.BackendFQDNEnvVar, "")
+	if backendFQDN == "" {
+		logger.WarningF("Backend FQDN was not provided using the --domain flag, skipping test")
+		logger.Skip()
+		return nil
 	}
 
 	ips, err := net.DefaultResolver.LookupIP(context.TODO(), "ip", backendFQDN)
@@ -574,7 +585,7 @@ func CheckDNSResolve(logger *log.Logger) error {
 	return nil
 }
 
-func NginxIngressControllerAvailable(logger *log.Logger) error {
+func NginxIngressControllerNotInstalled(logger *log.Logger) error {
 	logger.TitleF("Nginx Ingress Controller")
 
 	client, err := client.Clientset()
@@ -582,26 +593,18 @@ func NginxIngressControllerAvailable(logger *log.Logger) error {
 		return err
 	}
 
-	pods, err := client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+	_, err = client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labels.FormatLabels(nginxLabels),
 	})
 	if err != nil {
-		return err
-	}
-
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("nginx ingress controller is not installed in the cluster")
-	}
-
-	for _, pod := range pods.Items {
-		if pod.Status.Phase != v1.PodRunning {
-			return fmt.Errorf("pod [%s/%s] is not ready, reports phase %s",
-				pod.Namespace, pod.Name, pod.Status.Phase)
+		if !errors.IsNotFound(err) {
+			return err
+		} else {
+			return nil
 		}
 	}
 
-	logger.LogF("Nginx Ingress Controller is available")
-	return nil
+	return fmt.Errorf("nginx ingress controller is installed in the cluster")
 }
 
 func ShowOSInfo(logger *log.Logger) error {

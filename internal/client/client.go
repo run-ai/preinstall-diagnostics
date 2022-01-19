@@ -1,6 +1,8 @@
 package client
 
 import (
+	"errors"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -19,6 +21,40 @@ var (
 )
 
 func getConfig() (*rest.Config, error) {
+	if config != nil {
+		return config, nil
+	}
+
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	defaultKubeConfigPath := path.Join(userHomeDir, "/.kube/config")
+	kubeConfigPath := env.EnvOrDefault(env.KubeConfigEnvVar, defaultKubeConfigPath)
+
+	if _, err := os.Stat(kubeConfigPath); errors.Is(err, os.ErrNotExist) {
+		var err error
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		kubeconfigBytes, err := ioutil.ReadFile(kubeConfigPath)
+		if err != nil {
+			return nil, err
+		}
+
+		config, err = clientcmd.RESTConfigFromKubeConfig(kubeconfigBytes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return config, nil
+}
+
+func getConfig2() (*rest.Config, error) {
 	if config != nil {
 		return config, nil
 	}
