@@ -88,7 +88,7 @@ func Init(logger *log.Logger) error {
 		return err
 	}
 
-	logger.LogF("successfully initizlied Kubernetes client")
+	logger.LogF("successfully initialized Kubernetes client")
 	return nil
 }
 
