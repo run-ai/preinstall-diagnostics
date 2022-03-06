@@ -58,6 +58,7 @@ help fine-tune the installation process
           ```
           preinstall-diagnostics-linux-amd64 --image ${CLIENT_IMAGE_AND_TAG}
           ```
+          - In order for the tool to work properly with EKS, please run `aws configure` prior to execution
       * If the client is connected to the internet, the proper image will be pulled from the `run-ai-prod` registry.
 
 ## Help
