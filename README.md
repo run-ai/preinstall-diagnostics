@@ -43,7 +43,7 @@ help fine-tune the installation process
       * If the client environment is air-gapped, the image should be provided to them offline and pushed to their internal registry, and the binary should be run with `--image` to modify the image used:
         * Save the image locally
           ```
-          docker save --output preinstall-diagnostics.tar gcr.io/run-ai-prod/preinstall-diagnostics:${VERSION}
+          docker save --output preinstall-diagnostics.tar gcr.io/run-ai-lab/preinstall-diagnostics:${VERSION}
           ```
 
         * Load the image to the client's internal registry
@@ -51,7 +51,7 @@ help fine-tune the installation process
           Once the archive was provided to the user, they can load the image to their internal registry using docker:
           ```
           docker load --input preinstall-diagnostics.tar
-          docker tag gcr.io/run-ai-prod/preinstall-diagnostics:${VERSION} ${CLIENT_IMAGE_AND_TAG}
+          docker tag gcr.io/run-ai-lab/preinstall-diagnostics:${VERSION} ${CLIENT_IMAGE_AND_TAG}
           docker push ${CLIENT_IMAGE_AND_TAG}
           ```
         * Running the diagnostics tool with the internal image
