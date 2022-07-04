@@ -12,6 +12,8 @@ import (
 var (
 	internalClusterTests = []func(*log.Logger) error{
 		saas.CheckRunAIBackendReachable,
+		saas.DNSServersReachable,
+		saas.DynuReachable,
 		registry.CheckRunAIRegistryReachable,
 		cluster.ResolveBackendFQDN, // DNS: verify that the DNS provided as input can be resolved to an IP (optional, write/warn if the IP is one of the nodes)
 		cluster.PrintDNSResolvConf,

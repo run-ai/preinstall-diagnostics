@@ -2,7 +2,7 @@ OUT_DIR=_out
 BIN=preinstall-diagnostics
 
 REGISTRY=gcr.io/run-ai-lab
-VERSION=v2.0.1
+VERSION=v2.1.0
 
 IMAGE_DOCKER_FILE=cmd/preinstall-diagnostics/Dockerfile
 IMAGE=$(REGISTRY)/preinstall-diagnostics:$(VERSION)
