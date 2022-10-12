@@ -677,3 +677,38 @@ func RunAIAuthProviderReachable(logger *log.Logger) error {
 
 	return checkURLAvailable(auth)
 }
+
+func ListPods(logger *log.Logger) error {
+	logger.TitleF("List Pods")
+
+	client, err := client.Clientset()
+	if err != nil {
+		return err
+	}
+
+	var podList *v1.PodList
+	var pods []v1.Pod
+	cont := ""
+
+	for podList == nil || podList.Continue != "" {
+		var err error
+		podList, err = client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+			Limit:    500,
+			Continue: cont,
+		})
+		if err != nil {
+			return err
+		}
+
+		cont = podList.Continue
+		pods = append(pods, podList.Items...)
+	}
+
+	logger.LogF("Namespace/Name/Phase")
+
+	for _, pod := range pods {
+		logger.LogF("%s/%s/%s", pod.Namespace, pod.Name, pod.Status.Phase)
+	}
+
+	return nil
+}

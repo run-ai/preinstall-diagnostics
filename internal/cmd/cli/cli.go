@@ -25,6 +25,7 @@ var (
 		cluster.PrometheusNotInstalled,
 		cluster.NodeFeatureDiscoveryNotInstalled,
 		cluster.GPUFeatureDiscoveryNotInstalled,
+		cluster.ListPods,
 	}
 )
 
