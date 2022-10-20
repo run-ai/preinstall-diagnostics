@@ -17,6 +17,7 @@ import (
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/resources"
+	"golang.org/x/mod/semver"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -343,6 +344,10 @@ func ShowClusterVersion(logger *log.Logger) error {
 	}
 
 	logger.LogF("Kubernetes Cluster Version: %s", ver.String())
+
+	if semver.Compare(ver.String(), "v1.20.0") < 0 {
+		logger.ErrorF("Kubernetes Cluster Version is lower than 1.20.0")
+	}
 
 	isOpenShift, version, err := isOpenShift()
 	if err != nil {
