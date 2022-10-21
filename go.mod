@@ -6,6 +6,7 @@ require (
 	github.com/gertd/go-pluralize v0.1.7
 	github.com/openshift/api v0.0.0-20211222145011-3bf13cf5081a
 	github.com/pkg/errors v0.9.1
+	golang.org/x/mod v0.4.2
 	k8s.io/api v0.23.1
 	k8s.io/apimachinery v0.23.1
 	k8s.io/client-go v0.23.1
