@@ -12,6 +12,7 @@ import (
 	ver "github.com/run-ai/preinstall-diagnostics/internal/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 var (
