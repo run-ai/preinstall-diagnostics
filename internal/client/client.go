@@ -2,23 +2,35 @@ package client
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
-	"path"
-
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
+	"io/ioutil"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	config        *rest.Config
-	clientset     *kubernetes.Clientset
+	clientSet     *kubernetes.Clientset
 	dynamicClient dynamic.Interface
+
+	scheme *runtime.Scheme
 )
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(monitoringv1.AddToScheme(scheme))
+	
+}
 
 func getConfig() (*rest.Config, error) {
 	if config != nil {
@@ -54,33 +66,6 @@ func getConfig() (*rest.Config, error) {
 	return config, nil
 }
 
-func getConfig2() (*rest.Config, error) {
-	if config != nil {
-		return config, nil
-	}
-
-	// Try to build internal cluster config, and if that fails,
-	// try external cluster config
-	var err error
-	config, err = clientcmd.BuildConfigFromFlags("", "")
-	if err != nil {
-		userHomeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-
-		defaultKubeConfigPath := path.Join(userHomeDir, "/.kube/config")
-		kubeConfigPath := env.EnvOrDefault(env.KubeConfigEnvVar, defaultKubeConfigPath)
-
-		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return config, nil
-}
-
 func Init(logger *log.Logger) error {
 	logger.LogF("initializing Kubernetes client...")
 	_, err := getConfig()
@@ -92,9 +77,9 @@ func Init(logger *log.Logger) error {
 	return nil
 }
 
-func Clientset() (*kubernetes.Clientset, error) {
-	if clientset != nil {
-		return clientset, nil
+func ClientSet() (*kubernetes.Clientset, error) {
+	if clientSet != nil {
+		return clientSet, nil
 	}
 
 	conf, err := getConfig()
@@ -116,4 +101,10 @@ func DynamicClient() (dynamic.Interface, error) {
 	}
 
 	return dynamic.NewForConfig(conf)
+}
+
+func NewClient() (client.Client, error) {
+	return client.New(ctrl.GetConfigOrDie(), client.Options{
+		Scheme: scheme,
+	})
 }

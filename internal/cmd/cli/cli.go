@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/run-ai/preinstall-diagnostics/internal/client"
@@ -17,16 +18,14 @@ import (
 
 var (
 	externalClusterTests = []func(*log.Logger) error{
-		cluster.ShowGPUNodes, // gpu-feature-discovery // NVIDIA pre-requisites on GPU nodes. (gpu-feature-discovery checks this)
-		cluster.NvidiaDevicePluginNotInstalled,
-		cluster.DCGMExporterNotInstalled,
-		cluster.NginxIngressControllerNotInstalled,
+		// cluster.NvidiaDevicePluginNotInstalled,
+		// cluster.DCGMExporterNotInstalled,
 		cluster.ShowClusterVersion,
-		cluster.ShowStorageClasses,
-		cluster.PrometheusNotInstalled,
-		cluster.NodeFeatureDiscoveryNotInstalled,
-		cluster.GPUFeatureDiscoveryNotInstalled,
 		cluster.ListPods,
+		cluster.ShowGPUNodes,
+		cluster.NGINXIngressControllerInstalled,
+		cluster.PrometheusInstalled,
+		cluster.StorageClassExists,
 	}
 )
 
@@ -40,24 +39,32 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry,
 	util.TemplateResources(backendFQDN, image, imageRegistry, runaiSaas)
 
 	if dryRun {
-		resources.PrintResources(resources.CreationOrder())
+		err := resources.PrintResources(resources.CreationOrder())
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 		return
 	}
 
-	client.Init(logger)
+	err := client.Init(logger)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	dynClient, err := client.DynamicClient()
 	if err != nil {
 		panic(err)
 	}
 
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		panic(err)
 	}
 
-	logger.WriteStringF("cleaning up previous deployment if it exists...")
-	err = util.DeleteResources(client, dynClient, logger)
+	_, _ = logger.WriteStringF("cleaning up previous deployment if it exists...")
+	err = util.DeleteResources(k8s, dynClient, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -66,16 +73,16 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry,
 		return
 	}
 
-	logger.WriteStringF("deploying runai diagnostics tool...")
+	_, _ = logger.WriteStringF("deploying runai diagnostics tool...")
 	err = util.CreateResources(backendFQDN, dynClient)
 	if err != nil {
 		panic(err)
 	}
 
 	logger.TitleF("running external cluster tests...")
-	errs := util.RunInformationalTests(externalClusterTests, logger)
+	errs := util.RunTests(externalClusterTests, logger)
 
-	logger.WriteStringF("")
+	_, _ = logger.WriteStringF("")
 
 	logger.TitleF("running internal cluster tests using image %s...", image)
 	err = cluster.WaitDaemonSetAvailable(logger)
@@ -83,7 +90,7 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry,
 		panic(err)
 	}
 
-	pods, err := cluster.GetDaemonsetPods(client)
+	pods, err := cluster.GetDaemonsetPods(k8s)
 	if err != nil {
 		panic(err)
 	}
@@ -99,10 +106,10 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry,
 			podLogsHaveFailures = true
 		}
 
-		logger.WriteStringF("")
-		logger.WriteStringF("========================== LOGS FROM NODE %s ==========================",
+		_, _ = logger.WriteStringF("")
+		_, _ = logger.WriteStringF("========================== LOGS FROM NODE %s ==========================",
 			pod.Spec.NodeName)
-		logger.WriteStringF("")
+		_, _ = logger.WriteStringF("")
 
 		_, err = logger.WriteStringF(podLogs)
 		if err != nil {
@@ -110,8 +117,8 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry,
 		}
 	}
 
-	logger.WriteStringF("cleaning up...")
-	err = util.DeleteResources(client, dynClient, logger)
+	_, _ = logger.WriteStringF("cleaning up...")
+	err = util.DeleteResources(k8s, dynClient, logger)
 	if err != nil {
 		panic(err)
 	}

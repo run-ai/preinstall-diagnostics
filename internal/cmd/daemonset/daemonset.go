@@ -4,7 +4,6 @@ import (
 	"github.com/run-ai/preinstall-diagnostics/internal/client"
 	"github.com/run-ai/preinstall-diagnostics/internal/cluster"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
-	"github.com/run-ai/preinstall-diagnostics/internal/registry"
 	"github.com/run-ai/preinstall-diagnostics/internal/saas"
 	"github.com/run-ai/preinstall-diagnostics/internal/util"
 )
@@ -13,11 +12,8 @@ var (
 	internalClusterTests = []func(*log.Logger) error{
 		saas.CheckRunAIBackendReachable,
 		saas.DNSServersReachable,
-		saas.DynuReachable,
-		registry.CheckRunAIRegistryReachable,
 		cluster.ResolveBackendFQDN, // DNS: verify that the DNS provided as input can be resolved to an IP (optional, write/warn if the IP is one of the nodes)
 		cluster.PrintDNSResolvConf,
-		cluster.RunAIHelmRepositoryReachable,
 		cluster.DockerHubReachable,
 		cluster.QuayIOReachable,
 		cluster.RunAIPrometheusReachable,

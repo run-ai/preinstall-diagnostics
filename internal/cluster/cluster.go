@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"io"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"net"
 	"net/http"
 	"os"
@@ -24,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
+
+	runtime_client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -62,14 +66,6 @@ var (
 	nginxLabels = map[string]string{
 		"app": "nginx-ingress",
 	}
-
-	nfdLabels = map[string]string{
-		"app.kubernetes.io/name": "node-feature-discovery",
-	}
-
-	gfdLabels = map[string]string{
-		"app.kubernetes.io/name": "gpu-feature-discovery",
-	}
 )
 
 func startPingPongServer(logger *log.Logger) {
@@ -79,11 +75,11 @@ func startPingPongServer(logger *log.Logger) {
 		if err != nil {
 			logger.ErrorF("failed to marshal system time: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 
-		w.Write([]byte(tjs))
+		_, _ = w.Write(tjs)
 	})
 
 	go func() {
@@ -95,7 +91,7 @@ func startPingPongServer(logger *log.Logger) {
 }
 
 func GetCompletePodLogs(pod *v1.Pod, logger *log.Logger) (string, error) {
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return "", err
 	}
@@ -105,7 +101,7 @@ func GetCompletePodLogs(pod *v1.Pod, logger *log.Logger) (string, error) {
 	logs := ""
 
 	for fetchLogAttempts > 0 && !logsReady {
-		req := client.CoreV1().Pods(pod.Namespace).
+		req := k8s.CoreV1().Pods(pod.Namespace).
 			GetLogs(pod.Name, &v1.PodLogOptions{})
 		res, err := req.DoRaw(context.TODO())
 		if err != nil {
@@ -145,16 +141,15 @@ func GetDaemonsetPods(client *kubernetes.Clientset) ([]v1.Pod, error) {
 }
 
 func WaitDaemonSetAvailable(logger *log.Logger) error {
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
 
 	dsAvailabilityAttempts := attempts
-	available := false
 
-	for dsAvailabilityAttempts > 0 && !available {
-		ds, err := client.AppsV1().DaemonSets(resources.DaemonSet.Namespace).Get(context.TODO(),
+	for dsAvailabilityAttempts > 0 {
+		ds, err := k8s.AppsV1().DaemonSets(resources.DaemonSet.Namespace).Get(context.TODO(),
 			resources.DaemonSet.Name, metav1.GetOptions{})
 		if err != nil {
 			logger.LogF("fetching daemonset failed with %v, retrying in %d seconds",
@@ -178,7 +173,7 @@ func WaitDaemonSetAvailable(logger *log.Logger) error {
 }
 
 func waitAllPodsPingable(logger *log.Logger) error {
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
@@ -197,7 +192,7 @@ func waitAllPodsPingable(logger *log.Logger) error {
 	podPingAttempts := attempts
 	pingable := false
 
-	pods, err := GetDaemonsetPods(client)
+	pods, err := GetDaemonsetPods(k8s)
 	if err != nil {
 		return err
 	}
@@ -265,7 +260,7 @@ func waitAllPodsPingable(logger *log.Logger) error {
 
 		time.Sleep(sleepInterval)
 
-		pods, err = GetDaemonsetPods(client)
+		pods, err = GetDaemonsetPods(k8s)
 		if err != nil {
 			return err
 		}
@@ -333,7 +328,7 @@ func isOpenShift() (bool, string, error) {
 func ShowClusterVersion(logger *log.Logger) error {
 	logger.TitleF("Cluster Version")
 
-	dc, err := client.Clientset()
+	dc, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
@@ -382,18 +377,22 @@ func PrintDNSResolvConf(logger *log.Logger) error {
 func ShowGPUNodes(logger *log.Logger) error {
 	logger.TitleF("GPU Nodes")
 
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
 
 	labelSelector := strings.ReplaceAll(labels.FormatLabels(nvidiaLabels), "=", "")
 
-	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+	nodes, err := k8s.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
 		return err
+	}
+
+	if len(nodes.Items) == 0 {
+		return fmt.Errorf("No GPU nodes were found in the cluster")
 	}
 
 	for _, node := range nodes.Items {
@@ -406,7 +405,34 @@ func ShowGPUNodes(logger *log.Logger) error {
 	return nil
 }
 
-func PrometheusNotInstalled(logger *log.Logger) error {
+func PrometheusInstalled(logger *log.Logger) error {
+	logger.TitleF("Prometheus check")
+
+	k8s, err := client.NewClient()
+	if err != nil {
+		return err
+	}
+
+	testProm := &monitoringv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "default",
+		},
+	}
+
+	err = k8s.Get(context.TODO(), runtime_client.ObjectKeyFromObject(testProm), testProm)
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return fmt.Errorf("prometheus is not installed in the cluster")
+		} else if !errors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func PrometheusInstalledOld(logger *log.Logger) error {
 	logger.TitleF("Prometheus check")
 
 	dclient, err := client.DynamicClient()
@@ -417,131 +443,43 @@ func PrometheusNotInstalled(logger *log.Logger) error {
 	_, err = dclient.Resource(schema.GroupVersionResource{
 		Group:    "monitoring.coreos.com",
 		Version:  "v1",
-		Resource: "prometheuses",
-	}).List(context.TODO(), metav1.ListOptions{})
+		Resource: "prometheus",
+	}).Watch(context.TODO(), metav1.ListOptions{})
+	logger.ErrorF("%#v\n", err)
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if meta.IsNoMatchError(err) {
+			return fmt.Errorf("prometheus is not installed in the cluster")
+		} else if !errors.IsNotFound(err) {
 			return err
 		} else {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("prometheus is installed in the cluster")
-}
-
-func NodeFeatureDiscoveryNotInstalled(logger *log.Logger) error {
-	logger.TitleF("Node Feature Discovery")
-
-	client, err := client.Clientset()
-	if err != nil {
-		return err
-	}
-
-	pods, err := client.CoreV1().Pods("").
-		List(context.TODO(), metav1.ListOptions{
-			LabelSelector: labels.FormatLabels(nfdLabels),
-		})
-	if err != nil {
-		return err
-	}
-
-	if len(pods.Items) != 0 {
-		return fmt.Errorf("node-feature-discovery is installed in the cluster")
-	}
-
 	return nil
 }
 
-func GPUFeatureDiscoveryNotInstalled(logger *log.Logger) error {
-	logger.TitleF("GPU Feature Discovery")
-
-	client, err := client.Clientset()
-	if err != nil {
-		return err
-	}
-
-	pods, err := client.CoreV1().Pods("").
-		List(context.TODO(), metav1.ListOptions{
-			LabelSelector: labels.FormatLabels(gfdLabels),
-		})
-	if err != nil {
-		return err
-	}
-
-	if len(pods.Items) != 0 {
-		return fmt.Errorf("gpu-feature-discovery is installed in the cluster")
-	}
-
-	return nil
-}
-
-func ShowStorageClasses(logger *log.Logger) error {
+func StorageClassExists(logger *log.Logger) error {
 	logger.TitleF("Storage Classes")
 
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
 
-	scs, err := client.StorageV1().StorageClasses().List(context.TODO(), metav1.ListOptions{})
+	scs, err := k8s.StorageV1().StorageClasses().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	if len(scs.Items) == 0 {
-		logger.LogF("No storage classes defined in the cluster")
-		return nil
+		return fmt.Errorf("No storage classes defined in the cluster")
 	}
 
 	logger.LogF("StorageClasses in cluster:")
 
 	for _, sc := range scs.Items {
 		logger.LogF("	%s", sc.Name)
-	}
-
-	return nil
-}
-
-func NvidiaDevicePluginNotInstalled(logger *log.Logger) error {
-	logger.TitleF("Nvidia device plugin")
-
-	client, err := client.Clientset()
-	if err != nil {
-		return err
-	}
-
-	dss, err := client.AppsV1().DaemonSets("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, ds := range dss.Items {
-		if strings.Contains(ds.Name, nvidiaDevicePluginDaemonset) {
-			return fmt.Errorf("nvidia device plugin is installed in the cluster")
-		}
-	}
-
-	return nil
-}
-
-func DCGMExporterNotInstalled(logger *log.Logger) error {
-	logger.TitleF("DCGM Exporter")
-
-	client, err := client.Clientset()
-	if err != nil {
-		return err
-	}
-
-	dss, err := client.AppsV1().DaemonSets("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, ds := range dss.Items {
-		if strings.Contains(ds.Name, dcgmExporterDaemonset) {
-			return fmt.Errorf("dcgm exporter is installed in the cluster")
-		}
 	}
 
 	return nil
@@ -567,12 +505,12 @@ func ResolveBackendFQDN(logger *log.Logger) error {
 		logger.LogF(ip.String())
 	}
 
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
 
-	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	nodes, err := k8s.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -590,26 +528,24 @@ func ResolveBackendFQDN(logger *log.Logger) error {
 	return nil
 }
 
-func NginxIngressControllerNotInstalled(logger *log.Logger) error {
+func NGINXIngressControllerInstalled(logger *log.Logger) error {
 	logger.TitleF("Nginx Ingress Controller")
 
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
 
-	_, err = client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
-		LabelSelector: labels.FormatLabels(nginxLabels),
-	})
+	ics, err := k8s.NetworkingV1().IngressClasses().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
-		} else {
-			return nil
-		}
+		return err
 	}
 
-	return fmt.Errorf("nginx ingress controller is installed in the cluster")
+	if len(ics.Items) > 0 {
+		return nil
+	}
+
+	return fmt.Errorf("nginx ingress controller is not installed in the cluster")
 }
 
 func ShowOSInfo(logger *log.Logger) error {
@@ -686,7 +622,7 @@ func RunAIAuthProviderReachable(logger *log.Logger) error {
 func ListPods(logger *log.Logger) error {
 	logger.TitleF("List Pods")
 
-	client, err := client.Clientset()
+	k8s, err := client.ClientSet()
 	if err != nil {
 		return err
 	}
@@ -697,7 +633,7 @@ func ListPods(logger *log.Logger) error {
 
 	for podList == nil || podList.Continue != "" {
 		var err error
-		podList, err = client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+		podList, err = k8s.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
 			Limit:    500,
 			Continue: cont,
 		})
