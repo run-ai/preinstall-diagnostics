@@ -29,7 +29,6 @@ var (
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
-	
 }
 
 func getConfig() (*rest.Config, error) {

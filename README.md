@@ -72,7 +72,7 @@ Usage of ./_out/preinstall-diagnostics-darwin-arm64:
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.4.0")
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.15.0")
   -output string
     	File to save the output to (default "runai-preinstall-diagnostics.txt")
   -registry string
