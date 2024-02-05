@@ -78,7 +78,7 @@ func CreateResources(objs []client.Object, kubeDynamicClient dynamic.Interface) 
 				&unstructured.Unstructured{Object: unstructuredObj},
 				metav1.CreateOptions{})
 
-		if err != nil {
+		if err != nil && !kerrors.IsAlreadyExists(err) {
 			return errors.Wrap(err,
 				fmt.Sprintf("create error: resource kind: %s", gvk.Kind))
 		}
@@ -103,6 +103,5 @@ func DeletionOrder() []client.Object {
 		&ClusterRoleBinding,
 		&ServiceAccount,
 		&DaemonSet,
-		&Namespace,
 	}
 }
