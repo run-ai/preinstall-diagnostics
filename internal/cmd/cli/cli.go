@@ -29,14 +29,14 @@ var (
 	}
 )
 
-func CliMain(clean, dryRun bool, backendFQDN, image, imageRegistry,
+func CliMain(clean, dryRun bool, backendFQDN, image, imaegPullSecretName, imageRegistry,
 	runaiSaas string, version bool, logger *log.Logger) {
 	if version {
 		fmt.Println(ver.Version)
 		return
 	}
 
-	util.TemplateResources(backendFQDN, image, imageRegistry, runaiSaas)
+	util.TemplateResources(backendFQDN, image, imagePUllSecretName, imageRegistry, runaiSaas)
 
 	if dryRun {
 		err := resources.PrintResources(resources.CreationOrder())

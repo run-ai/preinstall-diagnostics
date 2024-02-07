@@ -17,6 +17,7 @@ const (
 	cleanArgName                  = "clean"
 	domainArgName                 = "domain"
 	imageArgName                  = "image"
+	imagePullSecretArgName        = "image-pull-secret"
 	dryRunArgName                 = "dry-run"
 	runaiContainerRegistryArgName = "registry"
 	runaiSaasArgName              = "saas-address"
@@ -34,6 +35,7 @@ var (
 	clean                  bool
 	domainFQDN             string
 	image                  string
+	imagePullSecretName    string
 	dryRun                 bool
 	runaiContainerRegistry string
 	runaiSaas              string
@@ -50,6 +52,7 @@ func init() {
 	flag.BoolVar(&clean, cleanArgName, false, "Clean all runai diagnostics tools from the cluster")
 	flag.StringVar(&domainFQDN, domainArgName, "", "FQDN of the runai backend to resolve (required for DNS resolve test)")
 	flag.StringVar(&image, imageArgName, registry.RunAIDiagnosticsImage, "Diagnostics image to use (for air-gapped environments)")
+	flag.StringVar(&imagePullSecretName, imagePullSecretArgName, "", "Secret name (within the 'runai-preinstall-diagnostics' namespace) that contains container-registry credentials")
 	flag.BoolVar(&dryRun, dryRunArgName, false, "Print the diagnostics resources without executing")
 	flag.StringVar(&runaiContainerRegistry, runaiContainerRegistryArgName, registry.RunAIProdRegistryURL, "URL to container image registry to check connectivity to")
 	flag.StringVar(&runaiSaas, runaiSaasArgName, saas.RunAISaasAddress, "URL the Run:AI service to check connectivity to")
@@ -76,6 +79,6 @@ func main() {
 
 		logger := log.NewLogger(outputFile)
 
-		cli.CliMain(clean, dryRun, domainFQDN, image, runaiContainerRegistry, runaiSaas, version, logger)
+		cli.CliMain(clean, dryRun, domainFQDN, image, imagePullSecretName, runaiContainerRegistry, runaiSaas, version, logger)
 	}
 }

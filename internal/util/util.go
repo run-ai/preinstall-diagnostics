@@ -46,7 +46,7 @@ func RunTests(tests []func(*log.Logger) error, logger *log.Logger) []error {
 	return errs
 }
 
-func TemplateResources(backendFQDN, image, imageRegistry, runaiSaas string) {
+func TemplateResources(backendFQDN, image, imagePullSecretName, imageRegistry, runaiSaas string) {
 	ds := &resources.DaemonSet
 	if backendFQDN != "" {
 		ds.Spec.Template.Spec.Containers[0].Env =
@@ -55,6 +55,14 @@ func TemplateResources(backendFQDN, image, imageRegistry, runaiSaas string) {
 					Name:  env.BackendFQDNEnvVar,
 					Value: backendFQDN,
 				})
+	}
+
+	if imagePullSecretName != "" {
+		ds.Spec.Template.Spec.ImagePullSecrets = []v1.LocalObjectReference{
+			{
+				Name: imagePullSecretName,
+			},
+		}
 	}
 
 	if imageRegistry != "" {
