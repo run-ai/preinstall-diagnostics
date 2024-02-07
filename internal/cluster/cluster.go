@@ -582,7 +582,7 @@ func checkURLAvailable(url string) error {
 func RunAIHelmRepositoryReachable(logger *log.Logger) error {
 	logger.TitleF("Run:AI Helm Repository")
 
-	const runaiCharts = "https://runai-charts.storage.googleapis.com"
+	const runaiCharts = "https://run-ai-charts.storage.googleapis.com"
 
 	return checkURLAvailable(runaiCharts)
 }

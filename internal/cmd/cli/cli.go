@@ -26,6 +26,7 @@ var (
 		cluster.NGINXIngressControllerInstalled,
 		cluster.PrometheusInstalled,
 		cluster.StorageClassExists,
+		cluster.RunAIHelmRepositoryReachable,
 	}
 )
 
