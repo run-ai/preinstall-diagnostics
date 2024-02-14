@@ -1,15 +1,10 @@
 package util
 
 import (
-	"context"
-	"time"
-
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/resources"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
@@ -92,23 +87,6 @@ func DeleteResources(client kubernetes.Interface, dynClient dynamic.Interface, l
 	err := resources.DeleteResources(resources.DeletionOrder(), dynClient)
 	if err != nil {
 		return err
-	}
-
-	logger.WriteStringF("waiting for all resources to be deleted...")
-
-	// wait for ns to be deleted
-	for {
-		_, err := client.CoreV1().Namespaces().Get(context.TODO(),
-			resources.Namespace.Name, metav1.GetOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				break
-			}
-
-			return err
-		}
-
-		time.Sleep(time.Second)
 	}
 
 	logger.WriteStringF("all resources were successfully deleted")

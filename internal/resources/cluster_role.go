@@ -24,6 +24,7 @@ var ClusterRole = rbacv1.ClusterRole{
 			Resources: []string{
 				"pods",
 				"nodes",
+				"secrets",
 			},
 			Verbs: []string{
 				"get",
