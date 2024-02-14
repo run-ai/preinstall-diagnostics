@@ -30,7 +30,7 @@ var (
 	}
 )
 
-func CliMain(clean, dryRun bool, backendFQDN, image, imagePullSecretName, imageRegistry,
+func CliMain(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecretName, imageRegistry,
 	runaiSaas string, version bool, logger *log.Logger) {
 	if version {
 		fmt.Println(ver.Version)
@@ -82,6 +82,12 @@ func CliMain(clean, dryRun bool, backendFQDN, image, imagePullSecretName, imageR
 
 	logger.TitleF("running external cluster tests...")
 	errs := util.RunTests(externalClusterTests, logger)
+
+	err = cluster.CertificateIsValid(logger, clusterFQDN)
+	if err != nil {
+		panic(err)
+	}
+	logger.Pass()
 
 	_, _ = logger.WriteStringF("")
 
