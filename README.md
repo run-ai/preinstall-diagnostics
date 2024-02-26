@@ -59,7 +59,7 @@ help fine-tune the installation process
           preinstall-diagnostics-linux-amd64 --image ${CLIENT_IMAGE_AND_TAG}
           ```
           - In order for the tool to work properly with EKS, please run `aws configure` prior to execution
-      * If the client is connected to the internet, the proper image will be pulled from the `run-ai-prod` registry.
+      * If the client is connected to the internet, the proper image will be pulled from the `run-ai-lab` registry.
 
 ## Help
 ```
@@ -67,12 +67,18 @@ help fine-tune the installation process
 Usage of ./_out/preinstall-diagnostics-darwin-arm64:
   -clean
     	Clean all runai diagnostics tools from the cluster
+  -cluster-domain string
+    	FQDN of the cluster
   -domain string
     	FQDN of the runai backend to resolve (required for DNS resolve test)
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.6")
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.18")
+  -image-pull-secret string
+    	Secret name (within the 'runai-preinstall-diagnostics' namespace) that contains container-registry credentials
+  -kubeconfig string
+    	Paths to a kubeconfig. Only required if out-of-cluster.
   -output string
     	File to save the output to (default "runai-preinstall-diagnostics.txt")
   -registry string

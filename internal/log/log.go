@@ -52,7 +52,7 @@ func formatColor(str, color string) string {
 	return fmt.Sprintf("%s%s%s", color, str, colorReset)
 }
 
-func red(str string) string {
+func Red(str string) string {
 	return formatColor(str, colorRed)
 }
 
@@ -60,7 +60,7 @@ func blue(str string) string {
 	return formatColor(str, colorBlue)
 }
 
-func green(str string) string {
+func Green(str string) string {
 	return formatColor(str, colorGreen)
 }
 
@@ -79,7 +79,7 @@ func (l *Logger) LogF(format string, args ...interface{}) {
 }
 
 func (l *Logger) ErrorF(format string, args ...interface{}) {
-	l.WriteStringF(red(ErrorTag+" "+format), args...)
+	l.WriteStringF(Red(ErrorTag+" "+format), args...)
 }
 
 func (l *Logger) WarningF(format string, args ...interface{}) {
@@ -91,7 +91,7 @@ func (l *Logger) Warning() {
 }
 
 func (l *Logger) Pass() {
-	l.WriteStringF(green(PassTag))
+	l.WriteStringF(Green(PassTag))
 }
 
 func (l *Logger) Skip() {
@@ -99,9 +99,9 @@ func (l *Logger) Skip() {
 }
 
 func (l *Logger) Fail() {
-	l.WriteStringF(red(FailTag))
+	l.WriteStringF(Red(FailTag))
 }
 
 func (l *Logger) Complete() {
-	l.WriteStringF(green(CompleteTag))
+	l.WriteStringF(Green(CompleteTag))
 }

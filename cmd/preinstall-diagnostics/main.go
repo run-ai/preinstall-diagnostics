@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
+	"github.com/run-ai/preinstall-diagnostics/internal/cmd/cli"
+	"github.com/run-ai/preinstall-diagnostics/internal/cmd/job"
 	"os"
 
-	"github.com/run-ai/preinstall-diagnostics/internal/cmd/cli"
-	"github.com/run-ai/preinstall-diagnostics/internal/cmd/daemonset"
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/registry"
@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	daemonsetMode bool
+	runInternalClusterTests bool
 
 	clean                  bool
 	backendDomainFQDN      string
@@ -48,8 +48,8 @@ var (
 )
 
 func init() {
-	daemonsetModeStr, _ := env.EnvOrError(resources.DamonsetModeEnvName)
-	daemonsetMode = daemonsetModeStr != ""
+	runInternalClusterTestsStr, _ := env.EnvOrError(resources.RunInternalClusterTestsEnvVarName)
+	runInternalClusterTests = runInternalClusterTestsStr != ""
 
 	flag.BoolVar(&clean, cleanArgName, false, "Clean all runai diagnostics tools from the cluster")
 	flag.StringVar(&backendDomainFQDN, backendDomainArgName, "", "FQDN of the runai backend to resolve (required for DNS resolve test)")
@@ -66,8 +66,8 @@ func init() {
 }
 
 func main() {
-	if daemonsetMode {
-		daemonset.DaemonsetMain(log.NewLogger(nil))
+	if runInternalClusterTests {
+		job.Main(log.NewLogger(nil))
 	} else {
 		err := os.RemoveAll(output)
 		if err != nil {
@@ -82,7 +82,7 @@ func main() {
 
 		logger := log.NewLogger(outputFile)
 
-		cli.CliMain(clean, dryRun, backendDomainFQDN, clusterDomainFQDN, image, imagePullSecretName,
-			runaiContainerRegistry, runaiSaas, version, logger)
+		cli.Main(clean, dryRun, backendDomainFQDN, clusterDomainFQDN, image,
+			imagePullSecretName, runaiContainerRegistry, runaiSaas, version, logger)
 	}
 }

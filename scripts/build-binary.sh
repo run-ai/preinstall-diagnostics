@@ -1,8 +1,16 @@
 go mod tidy
-go mod vendor
 
 LDFLAGS="-X 'github.com/run-ai/preinstall-diagnostics/internal/registry.RunAIDiagnosticsImage=${IMAGE}' \
          -X 'github.com/run-ai/preinstall-diagnostics/internal/version.Version=${VERSION}'"
+
+if [ "$OS" == "linux" ]; then
+  #Building a Linux binary
+  GOOS=linux GOARCH=amd64 go build \
+      -ldflags="${LDFLAGS}" \
+      -o ${OUT_DIR}/${BIN}-linux-amd64 cmd/preinstall-diagnostics/main.go
+
+  exit 0
+fi
 
 # Building a Windows binary
 GOOS=windows GOARCH=amd64 go build \

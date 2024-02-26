@@ -33,6 +33,18 @@ var ClusterRole = rbacv1.ClusterRole{
 		},
 		{
 			APIGroups: []string{
+				"batch",
+			},
+			Resources: []string{
+				"jobs",
+			},
+			Verbs: []string{
+				"get",
+				"list",
+			},
+		},
+		{
+			APIGroups: []string{
 				"apps",
 			},
 			Resources: []string{
