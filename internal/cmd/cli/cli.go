@@ -1,46 +1,36 @@
 package cli
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
-
-	"github.com/run-ai/preinstall-diagnostics/internal/client"
-	"github.com/run-ai/preinstall-diagnostics/internal/cluster"
+	"github.com/jedib0t/go-pretty/v6/table"
+	v2 "github.com/run-ai/preinstall-diagnostics/internal"
+	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/resources"
-	"github.com/run-ai/preinstall-diagnostics/internal/util"
+	"github.com/run-ai/preinstall-diagnostics/internal/utils"
 	ver "github.com/run-ai/preinstall-diagnostics/internal/version"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"os"
+	"time"
 )
 
-var (
-	externalClusterTests = []func(*log.Logger) error{
-		// cluster.NvidiaDevicePluginNotInstalled,
-		// cluster.DCGMExporterNotInstalled,
-		cluster.ShowClusterVersion,
-		cluster.ListPods,
-		cluster.ShowGPUNodes,
-		cluster.NGINXIngressControllerInstalled,
-		cluster.PrometheusInstalled,
-		cluster.StorageClassExists,
-		cluster.RunAIHelmRepositoryReachable,
-	}
-)
-
-func CliMain(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecretName, imageRegistry,
+func Main(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecretName, imageRegistry,
 	runaiSaas string, version bool, logger *log.Logger) {
 	if version {
 		fmt.Println(ver.Version)
 		return
 	}
 
-	util.TemplateResources(backendFQDN, image, imagePullSecretName, imageRegistry, runaiSaas)
+	creationOrder, deletionOrder := resources.TemplateResources(backendFQDN, image,
+		imagePullSecretName, imageRegistry, runaiSaas)
 
 	if dryRun {
-		err := resources.PrintResources(resources.CreationOrder())
+		err := resources.PrintResources(creationOrder)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -48,24 +38,18 @@ func CliMain(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecre
 		return
 	}
 
-	err := client.Init(logger)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	dynClient, err := client.DynamicClient()
+	dynClient, err := k8sclient.DynamicClient()
 	if err != nil {
 		panic(err)
 	}
 
-	k8s, err := client.ClientSet()
-	if err != nil {
-		panic(err)
-	}
+	//k8s, err := k8sclient.ClientSet()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	_, _ = logger.WriteStringF("cleaning up previous deployment if it exists...")
-	err = util.DeleteResources(k8s, dynClient, logger)
+	err = utils.DeleteResources(deletionOrder, dynClient, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -74,69 +58,96 @@ func CliMain(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecre
 		return
 	}
 
+	t := table.NewWriter()
+	t.AppendHeader(table.Row{"Test Name", "Result", "Test Message"})
+
+	RunTestsAndAppendToTable(t, clusterFQDN)
+
 	_, _ = logger.WriteStringF("deploying runai diagnostics tool...")
-	err = util.CreateResources(backendFQDN, dynClient)
+	err = utils.CreateResources(creationOrder, dynClient)
 	if err != nil {
 		panic(err)
 	}
 
-	logger.TitleF("running external cluster tests...")
-	errs := util.RunTests(externalClusterTests, logger)
-
-	err = cluster.CertificateIsValid(logger, clusterFQDN)
-	if err != nil {
-		panic(err)
-	}
-	logger.Pass()
-
-	_, _ = logger.WriteStringF("")
-
-	logger.TitleF("running internal cluster tests using image %s...", image)
-	err = cluster.WaitDaemonSetAvailable(logger)
+	// wait for job tests to complete and collect results
+	err = utils.WaitForJobsToComplete(10*time.Second, 5*time.Minute)
 	if err != nil {
 		panic(err)
 	}
 
-	pods, err := cluster.GetDaemonsetPods(k8s)
+	nodesResults, err := getNodesTestsResultsTables()
 	if err != nil {
 		panic(err)
 	}
 
-	var podLogsHaveFailures bool
-	for _, pod := range pods {
-		podLogs, err := cluster.GetCompletePodLogs(&pod, logger)
-		if err != nil {
-			panic(err)
-		}
-
-		if strings.Contains(podLogs, log.FailTag) {
-			podLogsHaveFailures = true
-		}
-
-		_, _ = logger.WriteStringF("")
-		_, _ = logger.WriteStringF("========================== LOGS FROM NODE %s ==========================",
-			pod.Spec.NodeName)
-		_, _ = logger.WriteStringF("")
-
-		_, err = logger.WriteStringF(podLogs)
-		if err != nil {
-			panic(err)
-		}
+	for _, nodeResult := range nodesResults {
+		t.AppendSeparator()
+		utils.AppendRowToTable(t, "Node "+nodeResult.Name, nodeResult.CalculatedResult, nodeResult.TestResultsTable.Render())
 	}
 
 	_, _ = logger.WriteStringF("cleaning up...")
-	err = util.DeleteResources(k8s, dynClient, logger)
+	err = utils.DeleteResources(deletionOrder, dynClient, logger)
 	if err != nil {
 		panic(err)
 	}
 
-	if len(errs) > 0 {
-		logger.WarningF("Cluster setup includes components that will " +
-			"require the customization of Run:AI installation. For more details, see installation instructions")
+	// compile results into a table
+	logger.WriteStringF("%s", t.Render())
+}
+
+type NodeResult struct {
+	Name             string
+	TestResultsTable table.Writer
+	CalculatedResult bool
+}
+
+func getNodesTestsResultsTables() ([]NodeResult, error) {
+	nodesResults := []NodeResult{}
+
+	k8s, err := k8sclient.ClientSet()
+	if err != nil {
+		panic(err)
 	}
 
-	if podLogsHaveFailures {
-		logger.ErrorF("Not all prerequisites have been met, please provide %s to Run:AI Customer Support.",
-			logger.FileName())
+	nodeList, err := k8s.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err)
 	}
+
+	for _, node := range nodeList.Items {
+		cm, err := k8s.CoreV1().ConfigMaps("runai-preinstall-diagnostics").
+			Get(context.TODO(), "runai-preinstall-diagnostics-"+node.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		nodeResultsJSON := cm.Data["results"]
+		var nodeResult []v2.TestResult
+		err = json.Unmarshal([]byte(nodeResultsJSON), &nodeResult)
+		if err != nil {
+			return nil, err
+		}
+
+		t := table.NewWriter()
+		t.AppendHeader(table.Row{"Test Name", "Result", "Test Message"})
+
+		pass := true
+
+		for _, res := range nodeResult {
+			utils.AppendRowToTable(t, res.Name, res.Result, res.Message)
+			t.AppendSeparator()
+
+			if !res.Result {
+				pass = false
+			}
+		}
+
+		nodesResults = append(nodesResults, NodeResult{
+			Name:             node.Name,
+			TestResultsTable: t,
+			CalculatedResult: pass,
+		})
+	}
+
+	return nodesResults, nil
 }

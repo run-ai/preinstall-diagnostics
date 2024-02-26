@@ -15,7 +15,7 @@ const (
 
 var (
 	// This is modified at build time by `make binary`
-	RunAIDiagnosticsImage = "gcr.io/run-ai-prod/preinstall-diagnostics:latest"
+	RunAIDiagnosticsImage = "gcr.io/run-ai-lab/preinstall-diagnostics:latest"
 )
 
 func CheckRunAIRegistryReachable(logger *log.Logger) error {

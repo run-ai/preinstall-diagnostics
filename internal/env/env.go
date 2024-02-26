@@ -8,8 +8,9 @@ import (
 const (
 	KubeConfigEnvVar = "KUBECONFIG"
 
-	NodeNameEnvVar = "NODE_NAME"
-	PodNameEnvVar  = "POD_NAME"
+	NodeNameEnvVar     = "NODE_NAME"
+	PodNameEnvVar      = "POD_NAME"
+	PodNamespaceEnvVar = "POD_NAMESPACE"
 
 	BackendFQDNEnvVar = "BACKEND_FQDN"
 

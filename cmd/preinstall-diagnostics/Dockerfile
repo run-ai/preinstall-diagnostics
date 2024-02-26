@@ -11,7 +11,7 @@ WORKDIR ${PROJECT_PATH}
 # Copy all code
 COPY . .
 
-RUN make binary
+RUN make binary-linux
 
 FROM fedora
 
