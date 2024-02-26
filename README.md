@@ -74,7 +74,7 @@ Usage of ./_out/preinstall-diagnostics-darwin-arm64:
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.6-testing")
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.18")
   -image-pull-secret string
     	Secret name (within the 'runai-preinstall-diagnostics' namespace) that contains container-registry credentials
   -kubeconfig string
