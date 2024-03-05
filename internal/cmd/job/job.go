@@ -14,9 +14,7 @@ import (
 )
 
 func Main(logger *log.Logger) {
-	testResults := []v2.TestResult{}
-
-	runTestsAndAppendResults(testResults, logger)
+	testResults := runTestsAndAppendResults(logger)
 
 	err := deleteConfigMapIfExists()
 	if err != nil {

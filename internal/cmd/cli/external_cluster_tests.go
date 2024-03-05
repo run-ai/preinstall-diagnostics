@@ -7,6 +7,10 @@ import (
 	"github.com/run-ai/preinstall-diagnostics/internal/utils"
 )
 
+const (
+	defaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
+)
+
 func RunTestsAndAppendToTable(t table.Writer, clusterFQDN string) {
 	showClusterVersion(t)
 	t.AppendSeparator()
@@ -26,7 +30,7 @@ func RunTestsAndAppendToTable(t table.Writer, clusterFQDN string) {
 }
 
 func showClusterVersion(t table.Writer) {
-	testName := "Cluster Version"
+	testName := "Kubernetes Cluster Version"
 	clusterVersion, err := external_cluster_tests.ShowClusterVersion()
 	if err != nil {
 		utils.AppendRowToTable(t, testName, false, err.Error())
@@ -36,7 +40,7 @@ func showClusterVersion(t table.Writer) {
 }
 
 func certificatesAreValid(t table.Writer, clusterFQDN string) {
-	testName := "Certifiactes Verification"
+	testName := "TLS Certificates verification"
 	err := external_cluster_tests.CertificateIsValid(clusterFQDN)
 	if err != nil {
 		utils.AppendRowToTable(t, testName, false, err.Error())
@@ -46,7 +50,7 @@ func certificatesAreValid(t table.Writer, clusterFQDN string) {
 }
 
 func helmRepoReachable(t table.Writer) {
-	testName := "Helm Repository Reachable"
+	testName := "Helm Repository Connectivity"
 	reachable, err := external_cluster_tests.RunAIHelmRepositoryReachable()
 	if err != nil {
 		utils.AppendRowToTable(t, testName, false, err.Error())
@@ -56,7 +60,7 @@ func helmRepoReachable(t table.Writer) {
 }
 
 func ingressControllerExists(t table.Writer) {
-	testName := "Ingress Controller Exists"
+	testName := "Ingress Controller Installed"
 	exists, err := external_cluster_tests.NGINXIngressControllerInstalled()
 	if err != nil {
 		utils.AppendRowToTable(t, testName, false, err.Error())
@@ -112,7 +116,7 @@ func showGPUNodes(t table.Writer) {
 }
 
 func showStorageClasses(t table.Writer) {
-	testName := "Show StorageClasses"
+	testName := "Available StorageClasses"
 	scs, err := external_cluster_tests.ShowStorageClasses()
 	if err != nil {
 		utils.AppendRowToTable(t, testName, false, err.Error())
@@ -120,6 +124,12 @@ func showStorageClasses(t table.Writer) {
 		scsStr := ""
 		for i := range scs {
 			scsStr += scs[i].Name
+
+			if possibleDefault, exists := scs[i].Annotations[defaultStorageClassAnnotation]; exists {
+				if possibleDefault == "true" {
+					scsStr += " (default)"
+				}
+			}
 
 			if i < len(scs)-1 {
 				scsStr += "\n"

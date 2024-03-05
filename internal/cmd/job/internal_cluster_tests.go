@@ -6,7 +6,9 @@ import (
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 )
 
-func runTestsAndAppendResults(testResults []v2.TestResult, logger *log.Logger) {
+func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
+	var testResults []v2.TestResult
+
 	osInfo, err := internal_cluster_tests2.ShowOSInfo()
 	if err != nil {
 		testResults = append(testResults, v2.TestResult{
@@ -118,4 +120,6 @@ func runTestsAndAppendResults(testResults []v2.TestResult, logger *log.Logger) {
 			Message: "",
 		})
 	}
+
+	return testResults
 }

@@ -12,7 +12,7 @@ import (
 
 func CertificateIsValid(clusterFQDN string) error {
 	if clusterFQDN == "" {
-		return fmt.Errorf("no cluster domain specified")
+		return fmt.Errorf("no cluster domain specified, please provide it using --cluster-domain")
 	}
 
 	secretName := "runai-cluster-domain-tls-secret"
