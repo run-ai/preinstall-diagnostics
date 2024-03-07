@@ -20,19 +20,21 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
 chmod +x ./preinstall-diagnostics-darwin-arm64 && \ 
   ./preinstall-diagnostics-darwin-arm64 \
       --domain ${CONTROL_PLANE_FQDN} \
-      --cluster-domain ${CLUSTER_FQDN}
+      --cluster-domain ${CLUSTER_FQDN} \
+  # if the diagnostics image is hosted in a private registry
+      --image-pull-secret ${IMAGE_PULL_SECRET_NAME} \
+      --image ${PRIVATE_REGISTRY_IMAGE_URL}    
 ```
 
 ### Air-gapped deployment
-- The container image should be provided to the customer as well:
-  * On air-gapped deployments, the diagnostics image should be provided by Run:ai support and manually pushed to the organization's registry.
-  * The binary should be run with `--image` parameter to modify the diagnostics image to be used:
+- On an air-gapped deployment, the diagnostics image should be pulled, saved and manually pushed to the organization's registry.
+- The binary should be run with `--image` parameter to modify the diagnostics image to be used:
 
   * Save the image locally
     ```
     docker save --output preinstall-diagnostics.tar gcr.io/run-ai-lab/preinstall-diagnostics:${VERSION}
     ```
-  * Load the image to the client's internal registry
+  * Load the image to the organization's registry
      ```
      docker load --input preinstall-diagnostics.tar
      docker tag gcr.io/run-ai-lab/preinstall-diagnostics:${VERSION} ${CLIENT_IMAGE_AND_TAG} 
@@ -44,7 +46,6 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
   ./preinstall-diagnostics-darwin-arm64 \
       --domain ${CONTROL_PLANE_FQDN} \
       --cluster-domain ${CLUSTER_FQDN} \
-      # if the diagnostics image is hosted in a private registry
       --image-pull-secret ${IMAGE_PULL_SECRET_NAME} \
       --image ${PRIVATE_REGISTRY_IMAGE_URL}    
 ```
