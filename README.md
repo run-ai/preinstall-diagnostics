@@ -6,7 +6,7 @@ help fine-tune the installation process
 
 ## Usage
 
-### SaaS Environments
+### Run:ai SaaS
 - In order for the tool to work properly with EKS, please run `aws configure` prior to execution
 ```shell
 chmod +x ./preinstall-diagnostics-darwin-arm64 && \
@@ -15,7 +15,7 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
       --cluster-domain ${CLUSTER_FQDN}
 ```
 
-### Self Hosted Environments
+### Self-Hosted deployment
 ```shell
 chmod +x ./preinstall-diagnostics-darwin-arm64 && \ 
   ./preinstall-diagnostics-darwin-arm64 \
@@ -23,9 +23,11 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
       --cluster-domain ${CLUSTER_FQDN}
 ```
 
-### Air-gapped Environments
+### Air-gapped deployment
 - The container image should be provided to the customer as well:
-  * If the client environment is air-gapped, the image should be provided to them offline and pushed to their internal registry, and the binary should be run with `--image` to modify the image used:
+  * On air-gapped deployments, the diagnostics image should be provided by Run:ai support and manually pushed to the organization's registry.
+  * The binary should be run with `--image` parameter to modify the diagnostics image to be used:
+
   * Save the image locally
     ```
     docker save --output preinstall-diagnostics.tar gcr.io/run-ai-lab/preinstall-diagnostics:${VERSION}
@@ -61,8 +63,8 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
 
 ## Help
 ```
-❯ ./_out/preinstall-diagnostics-darwin-arm64 --help
-Usage of ./_out/preinstall-diagnostics-darwin-arm64:
+❯ ./preinstall-diagnostics-darwin-arm64 --help
+Usage of ./preinstall-diagnostics-darwin-arm64:
   -clean
     	Clean all runai diagnostics tools from the cluster
   -cluster-domain string
