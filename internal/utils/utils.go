@@ -3,15 +3,16 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 	"github.com/run-ai/preinstall-diagnostics/internal/resources"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 func CheckURLAvailable(url string) (bool, error) {
@@ -36,7 +37,7 @@ func WaitForJobsToComplete(interval, timeout time.Duration) error {
 	for ; timeout > 0; timeout -= interval {
 		time.Sleep(interval)
 
-		jobs, err := k8s.BatchV1().Jobs("runai-preinstall-diagnostics").List(context.TODO(),
+		jobs, err := k8s.BatchV1().Jobs("runai-diagnostics").List(context.TODO(),
 			metav1.ListOptions{})
 		if err != nil {
 			return err

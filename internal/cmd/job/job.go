@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"encoding/json"
+
 	v2 "github.com/run-ai/preinstall-diagnostics/internal"
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"
@@ -34,7 +35,7 @@ func deleteConfigMapIfExists() error {
 	}
 
 	err = k8s.CoreV1().ConfigMaps(resources.Namespace.Name).Delete(context.TODO(),
-		"runai-preinstall-diagnostics-"+env.EnvOrDefault("NODE_NAME", ""),
+		"runai-diagnostics-"+env.EnvOrDefault("NODE_NAME", ""),
 		metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
@@ -56,7 +57,7 @@ func createConfigMapWithTestResults(results []v2.TestResult) error {
 
 	cm := v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "runai-preinstall-diagnostics-" + env.EnvOrDefault("NODE_NAME", ""),
+			Name:      "runai-diagnostics-" + env.EnvOrDefault("NODE_NAME", ""),
 			Namespace: resources.Namespace.Name,
 		},
 		Data: map[string]string{
