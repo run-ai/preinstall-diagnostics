@@ -77,11 +77,11 @@ Usage of ./preinstall-diagnostics-darwin-arm64:
   -image string
     	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.18")
   -image-pull-secret string
-    	Secret name (within the 'runai-preinstall-diagnostics' namespace) that contains container-registry credentials
+    	Secret name (within the 'runai-diagnostics' namespace) that contains container-registry credentials
   -kubeconfig string
     	Paths to a kubeconfig. Only required if out-of-cluster.
   -output string
-    	File to save the output to (default "runai-preinstall-diagnostics.txt")
+    	File to save the output to (default "runai-diagnostics.txt")
   -registry string
     	URL to container image registry to check connectivity to (default "https://gcr.io/run-ai-prod")
   -saas-address string

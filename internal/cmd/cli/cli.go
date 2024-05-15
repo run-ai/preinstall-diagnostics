@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/jedib0t/go-pretty/v6/table"
 	v2 "github.com/run-ai/preinstall-diagnostics/internal"
 	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"
@@ -15,8 +18,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"os"
-	"time"
 )
 
 func Main(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecretName, imageRegistry,
@@ -115,8 +116,8 @@ func getNodesTestsResultsTables() ([]NodeResult, error) {
 	}
 
 	for _, node := range nodeList.Items {
-		cm, err := k8s.CoreV1().ConfigMaps("runai-preinstall-diagnostics").
-			Get(context.TODO(), "runai-preinstall-diagnostics-"+node.Name, metav1.GetOptions{})
+		cm, err := k8s.CoreV1().ConfigMaps("runai-diagnostics").
+			Get(context.TODO(), "runai-diagnostics-"+node.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}

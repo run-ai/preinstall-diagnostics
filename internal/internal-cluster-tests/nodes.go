@@ -4,19 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/run-ai/preinstall-diagnostics/internal/env"
-	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"
-	"github.com/run-ai/preinstall-diagnostics/internal/log"
-	"github.com/run-ai/preinstall-diagnostics/internal/resources"
 	"io"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
+	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"
+	"github.com/run-ai/preinstall-diagnostics/internal/log"
+	"github.com/run-ai/preinstall-diagnostics/internal/resources"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -103,7 +104,7 @@ func WaitForJobPodsToBeRunning(logger *log.Logger) error {
 	for podAvailabilityAttempts > 0 {
 		logger.LogF("waiting for jobs to be available...")
 
-		jobs, err := k8s.BatchV1().Jobs("runai-preinstall-diagnostics").List(context.TODO(), metav1.ListOptions{})
+		jobs, err := k8s.BatchV1().Jobs("runai-diagnostics").List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -127,7 +128,7 @@ func WaitForJobPodsToBeRunning(logger *log.Logger) error {
 
 func GetJobsPods(client *kubernetes.Clientset) ([]v1.Pod, error) {
 	labelSelector := strings.ReplaceAll(labels.FormatLabels(map[string]string{
-		"runai-preinstall-diagnostics": "",
+		"runai-diagnostics": "",
 	}), "=", "")
 	pods, err := client.CoreV1().Pods(resources.Namespace.Name).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labelSelector,
