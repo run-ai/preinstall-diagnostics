@@ -59,7 +59,7 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
       --cluster-domain my-cluster.my-org.com \
       # if the diagnostics image is hosted in a private registry
       --image-pull-secret image-pull-secret \
-      --image gcr.io/my-org/containers/preinstall-diagnostics:v2.16    
+      --image gcr.io/my-org/containers/preinstall-diagnostics:v2.16.19    
 ```
 
 ## Help
@@ -75,7 +75,7 @@ Usage of ./preinstall-diagnostics-darwin-arm64:
   -dry-run
     	Print the diagnostics resources without executing
   -image string
-    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.18")
+    	Diagnostics image to use (for air-gapped environments) (default "gcr.io/run-ai-lab/preinstall-diagnostics:v2.16.19")
   -image-pull-secret string
     	Secret name (within the 'runai-diagnostics' namespace) that contains container-registry credentials
   -kubeconfig string
