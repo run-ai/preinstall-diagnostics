@@ -88,6 +88,9 @@ Usage of ./preinstall-diagnostics-darwin-arm64:
     	URL the Run:AI service to check connectivity to (default "https://app.run.ai")
   -version
     	Prints the binary version
+  -airgapped
+    	skip reachability checks to external servers 
+
 ```
 
 ## Build

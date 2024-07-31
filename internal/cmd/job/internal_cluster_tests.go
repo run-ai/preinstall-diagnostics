@@ -62,53 +62,52 @@ func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
 	}
 
 	airgapped := env.EnvOrDefault(env.AirgappedEnvVar, "false")
-	logger.WriteStringF("airgapped = " + airgapped)
-	//if airgapped != "true" {
-	reachable, err := internal_cluster_tests2.RunAIAuthProviderReachable()
-	if err != nil {
-		testResults = append(testResults, v2.TestResult{
-			Name:    "RunAI Auth Provider Reachable",
-			Result:  false,
-			Message: err.Error(),
-		})
-	} else {
-		testResults = append(testResults, v2.TestResult{
-			Name:    "RunAI Auth Provider Reachable",
-			Result:  reachable,
-			Message: "",
-		})
-	}
+	if airgapped != "true" {
+		reachable, err := internal_cluster_tests2.RunAIAuthProviderReachable()
+		if err != nil {
+			testResults = append(testResults, v2.TestResult{
+				Name:    "RunAI Auth Provider Reachable",
+				Result:  false,
+				Message: err.Error(),
+			})
+		} else {
+			testResults = append(testResults, v2.TestResult{
+				Name:    "RunAI Auth Provider Reachable",
+				Result:  reachable,
+				Message: "",
+			})
+		}
 
-	reachable, err = internal_cluster_tests2.RunAIPrometheusReachable()
-	if err != nil {
-		testResults = append(testResults, v2.TestResult{
-			Name:    "RunAI Prometheus Reachable",
-			Result:  false,
-			Message: err.Error(),
-		})
-	} else {
-		testResults = append(testResults, v2.TestResult{
-			Name:    "RunAI Prometheus Reachable",
-			Result:  reachable,
-			Message: "",
-		})
-	}
+		reachable, err = internal_cluster_tests2.RunAIPrometheusReachable()
+		if err != nil {
+			testResults = append(testResults, v2.TestResult{
+				Name:    "RunAI Prometheus Reachable",
+				Result:  false,
+				Message: err.Error(),
+			})
+		} else {
+			testResults = append(testResults, v2.TestResult{
+				Name:    "RunAI Prometheus Reachable",
+				Result:  reachable,
+				Message: "",
+			})
+		}
 
-	reachable, err = internal_cluster_tests2.RunAIBackendReachable()
-	if err != nil {
-		testResults = append(testResults, v2.TestResult{
-			Name:    "RunAI Backend Reachable",
-			Result:  false,
-			Message: err.Error(),
-		})
-	} else {
-		testResults = append(testResults, v2.TestResult{
-			Name:    "RunAI Backend Reachable",
-			Result:  reachable,
-			Message: "",
-		})
+		reachable, err = internal_cluster_tests2.RunAIBackendReachable()
+		if err != nil {
+			testResults = append(testResults, v2.TestResult{
+				Name:    "RunAI Backend Reachable",
+				Result:  false,
+				Message: err.Error(),
+			})
+		} else {
+			testResults = append(testResults, v2.TestResult{
+				Name:    "RunAI Backend Reachable",
+				Result:  reachable,
+				Message: "",
+			})
+		}
 	}
-	//}
 	err = internal_cluster_tests2.CheckNodeConnectivity(logger)
 	if err != nil {
 		testResults = append(testResults, v2.TestResult{
