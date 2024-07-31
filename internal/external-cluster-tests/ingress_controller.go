@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func NGINXIngressControllerInstalled() (bool, error) {
+func IngressControllerInstalled() (bool, error) {
 	k8s, err := k8sclient.ClientSet()
 	if err != nil {
 		return false, err

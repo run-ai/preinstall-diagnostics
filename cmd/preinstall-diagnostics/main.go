@@ -25,6 +25,7 @@ const (
 	runaiSaasArgName              = "saas-address"
 	outputArgName                 = "output"
 	versionArgName                = "version"
+	airgappedArgName              = "airgapped"
 )
 
 const (
@@ -33,19 +34,18 @@ const (
 
 var (
 	runInternalClusterTests bool
-
-	clean                  bool
-	backendDomainFQDN      string
-	clusterDomainFQDN      string
-	image                  string
-	imagePullSecretName    string
-	dryRun                 bool
-	runaiContainerRegistry string
-	runaiSaas              string
-	output                 string
-	version                bool
-
-	outputFile *os.File
+	clean                   bool
+	backendDomainFQDN       string
+	clusterDomainFQDN       string
+	image                   string
+	imagePullSecretName     string
+	dryRun                  bool
+	runaiContainerRegistry  string
+	runaiSaas               string
+	output                  string
+	version                 bool
+	airgapped               bool
+	outputFile              *os.File
 )
 
 func init() {
@@ -62,7 +62,7 @@ func init() {
 	flag.StringVar(&runaiSaas, runaiSaasArgName, saas.RunAISaasAddress, "URL the Run:AI service to check connectivity to")
 	flag.StringVar(&output, outputArgName, defaultOutputFileName, "File to save the output to")
 	flag.BoolVar(&version, versionArgName, false, "Prints the binary version")
-
+	flag.BoolVar(&airgapped, airgappedArgName, false, "skip tests that require network access")
 	flag.Parse()
 }
 
@@ -84,6 +84,6 @@ func main() {
 		logger := log.NewLogger(outputFile)
 
 		cli.Main(clean, dryRun, backendDomainFQDN, clusterDomainFQDN, image,
-			imagePullSecretName, runaiContainerRegistry, runaiSaas, version, logger)
+			imagePullSecretName, runaiContainerRegistry, runaiSaas, version, airgapped, logger)
 	}
 }

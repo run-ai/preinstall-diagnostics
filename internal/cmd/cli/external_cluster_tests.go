@@ -61,7 +61,7 @@ func helmRepoReachable(t table.Writer) {
 
 func ingressControllerExists(t table.Writer) {
 	testName := "Ingress Controller Installed"
-	exists, err := external_cluster_tests.NGINXIngressControllerInstalled()
+	exists, err := external_cluster_tests.IngressControllerInstalled()
 	if err != nil {
 		utils.AppendRowToTable(t, testName, false, err.Error())
 	} else {

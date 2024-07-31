@@ -2,13 +2,13 @@ package job
 
 import (
 	v2 "github.com/run-ai/preinstall-diagnostics/internal"
+	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	internal_cluster_tests2 "github.com/run-ai/preinstall-diagnostics/internal/internal-cluster-tests"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
 )
 
 func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
 	var testResults []v2.TestResult
-
 	osInfo, err := internal_cluster_tests2.ShowOSInfo()
 	if err != nil {
 		testResults = append(testResults, v2.TestResult{
@@ -61,6 +61,9 @@ func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
 		})
 	}
 
+	airgapped := env.EnvOrDefault(env.AirgappedEnvVar, "false")
+	logger.WriteStringF("airgapped = " + airgapped)
+	//if airgapped != "true" {
 	reachable, err := internal_cluster_tests2.RunAIAuthProviderReachable()
 	if err != nil {
 		testResults = append(testResults, v2.TestResult{
@@ -105,7 +108,7 @@ func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
 			Message: "",
 		})
 	}
-
+	//}
 	err = internal_cluster_tests2.CheckNodeConnectivity(logger)
 	if err != nil {
 		testResults = append(testResults, v2.TestResult{

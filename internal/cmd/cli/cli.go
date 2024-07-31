@@ -21,14 +21,17 @@ import (
 )
 
 func Main(clean, dryRun bool, backendFQDN, clusterFQDN, image, imagePullSecretName, imageRegistry,
-	runaiSaas string, version bool, logger *log.Logger) {
+	runaiSaas string, version bool, airgapped bool, logger *log.Logger) {
+	if airgapped {
+		fmt.Println("airgapped")
+	}
 	if version {
 		fmt.Println(ver.Version)
 		return
 	}
 
 	creationOrder, deletionOrder := resources.TemplateResources(backendFQDN, image,
-		imagePullSecretName, imageRegistry, runaiSaas)
+		imagePullSecretName, imageRegistry, runaiSaas, airgapped)
 
 	if dryRun {
 		err := resources.PrintResources(creationOrder)
