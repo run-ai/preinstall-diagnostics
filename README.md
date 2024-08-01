@@ -47,7 +47,7 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
       --domain ${CONTROL_PLANE_FQDN} \
       --cluster-domain ${CLUSTER_FQDN} \
       --image-pull-secret ${IMAGE_PULL_SECRET_NAME} \
-      --image ${PRIVATE_REGISTRY_IMAGE_URL}    
+      --image ${PRIVATE_REGISTRY_IMAGE_URL} --airgapped    
 ```
 
 ### Example
