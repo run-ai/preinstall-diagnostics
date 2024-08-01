@@ -5,6 +5,7 @@ import (
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	internal_cluster_tests2 "github.com/run-ai/preinstall-diagnostics/internal/internal-cluster-tests"
 	"github.com/run-ai/preinstall-diagnostics/internal/log"
+	"strconv"
 )
 
 func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
@@ -61,8 +62,11 @@ func runTestsAndAppendResults(logger *log.Logger) []v2.TestResult {
 		})
 	}
 
-	airgapped := env.EnvOrDefault(env.AirgappedEnvVar, "false")
-	if airgapped != "true" {
+	airgapped, err := strconv.ParseBool(env.EnvOrDefault(env.AirgappedEnvVar, "false"))
+	if err != nil {
+		airgapped = false
+	}
+	if !airgapped {
 		reachable, err := internal_cluster_tests2.RunAIAuthProviderReachable()
 		if err != nil {
 			testResults = append(testResults, v2.TestResult{
