@@ -112,6 +112,9 @@ func WaitForJobPodsToBeRunning(logger *log.Logger) error {
 		logger.LogF("waiting for pods to be available...")
 		availablePods := 0
 		for _, job := range jobs.Items {
+			if job.Status.Ready == nil {
+				continue
+			}
 			availablePods += int(*job.Status.Ready)
 		}
 
