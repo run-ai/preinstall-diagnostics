@@ -3,7 +3,6 @@ package job
 import (
 	"context"
 	"encoding/json"
-
 	v2 "github.com/run-ai/preinstall-diagnostics/internal"
 	"github.com/run-ai/preinstall-diagnostics/internal/env"
 	"github.com/run-ai/preinstall-diagnostics/internal/k8sclient"

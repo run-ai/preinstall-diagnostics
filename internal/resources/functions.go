@@ -93,7 +93,7 @@ func CreateResources(objs []client.Object, kubeDynamicClient dynamic.Interface) 
 }
 
 func TemplateResources(backendFQDN, image, imagePullSecretName,
-	imageRegistry, runaiSaas string) (creationOrder, deletionOrder []client.Object) {
+	imageRegistry, runaiSaas string, airgapped bool) (creationOrder, deletionOrder []client.Object) {
 	creationOrder = []client.Object{}
 
 	k8s, err := k8sclient.ClientSet()
@@ -120,6 +120,21 @@ func TemplateResources(backendFQDN, image, imagePullSecretName,
 					Name: imagePullSecretName,
 				},
 			}
+		}
+		if airgapped {
+			job.Spec.Template.Spec.Containers[0].Env =
+				append(job.Spec.Template.Spec.Containers[0].Env,
+					v1.EnvVar{
+						Name:  env.AirgappedEnvVar,
+						Value: "true",
+					})
+		} else {
+			job.Spec.Template.Spec.Containers[0].Env =
+				append(job.Spec.Template.Spec.Containers[0].Env,
+					v1.EnvVar{
+						Name:  env.AirgappedEnvVar,
+						Value: "false",
+					})
 		}
 
 		if imageRegistry != "" {

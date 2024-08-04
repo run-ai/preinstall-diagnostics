@@ -47,7 +47,7 @@ chmod +x ./preinstall-diagnostics-darwin-arm64 && \
       --domain ${CONTROL_PLANE_FQDN} \
       --cluster-domain ${CLUSTER_FQDN} \
       --image-pull-secret ${IMAGE_PULL_SECRET_NAME} \
-      --image ${PRIVATE_REGISTRY_IMAGE_URL}    
+      --image ${PRIVATE_REGISTRY_IMAGE_URL} --airgapped    
 ```
 
 ### Example
@@ -88,6 +88,9 @@ Usage of ./preinstall-diagnostics-darwin-arm64:
     	URL the Run:AI service to check connectivity to (default "https://app.run.ai")
   -version
     	Prints the binary version
+  -airgapped
+    	skip reachability checks to external servers 
+
 ```
 
 ## Build

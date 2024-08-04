@@ -17,6 +17,7 @@ const (
 	RegistryEnvVar = "REGISTRY"
 
 	RunAISaasEnvVar = "RUNAI_SAAS"
+	AirgappedEnvVar = "AIRGAPPED"
 )
 
 func EnvOrError(envVar string) (string, error) {
